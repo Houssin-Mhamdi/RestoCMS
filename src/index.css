@@ -1,0 +1,86 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-primary: #ea580c;
+  --color-primary-hover: #c2410c;
+  --color-primary-light: #ffedd5;
+  --color-sidebar-bg: #1c1917;
+  --color-sidebar-hover: #292524;
+  --color-sidebar-active: #ea580c;
+  --color-accent: #f59e0b;
+  --color-accent-hover: #d97706;
+  --color-success: #16a34a;
+  --color-danger: #dc2626;
+  --color-surface: #fafaf9;
+  --color-surface-alt: #f5f5f4;
+  --color-border: #e7e5e4;
+  --color-muted: #a8a29e;
+  --color-card: #ffffff;
+  --color-text: #292524;
+}
+
+.dark {
+  --color-primary-light: #431407;
+  --color-surface: #1c1917;
+  --color-surface-alt: #292524;
+  --color-border: #44403c;
+  --color-muted: #78716c;
+  --color-card: #292524;
+  --color-text: #e7e5e4;
+}
+
+.dark .text-stone-800,
+.dark .text-stone-700,
+.dark .text-stone-600 { color: #e7e5e4; }
+
+.dark .bg-stone-100 { background-color: #1c1917; }
+
+.dark .bg-stone-50 { background-color: #292524; }
+
+body {
+  margin: 0;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Touch / tablet optimizations */
+button, a, input, select, textarea, [role="button"] {
+  touch-action: manipulation;
+}
+
+/* Larger minimum tap target for touch */
+@media (hover: none) and (pointer: coarse) {
+  button, a, [role="button"], .nav-item {
+    min-height: 44px;
+  }
+  input, select, textarea {
+    font-size: 16px;
+  }
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-muted);
+}
