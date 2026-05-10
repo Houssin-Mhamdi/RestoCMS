@@ -76,6 +76,30 @@ CREATE POLICY "Users can update own products"
 CREATE POLICY "Users can delete own products"
   ON products FOR DELETE USING (auth.uid() = user_id);
 
+-- 6. CALENDAR EVENTS TABLE
+CREATE TABLE IF NOT EXISTS calendar_events (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid() NOT NULL,
+  date DATE NOT NULL,
+  title TEXT NOT NULL,
+  note TEXT DEFAULT '',
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE calendar_events ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own events"
+  ON calendar_events FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own events"
+  ON calendar_events FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own events"
+  ON calendar_events FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own events"
+  ON calendar_events FOR DELETE USING (auth.uid() = user_id);
+
 -- ============================================
 -- 5. STORAGE BUCKET FOR AVATARS
 -- Run this in Supabase Dashboard > Storage

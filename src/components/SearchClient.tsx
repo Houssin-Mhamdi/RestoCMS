@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react"
 import { useStore, type Client } from "../lib/store"
-import { useI18n } from "../lib/i18n"
+import { useI18n, LOCALE_MAP } from "../lib/i18n"
 import { fuzzySort } from "../lib/fuzzy"
 import {
   updateClientOnSupabase,
@@ -31,7 +31,7 @@ interface SearchClientProps {
 
 export default function SearchClient({ onSelectClient }: SearchClientProps) {
   const { state, dispatch } = useStore()
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   const [search, setSearch] = useState("")
   const [page, setPage] = useState(1)
 
@@ -142,7 +142,7 @@ export default function SearchClient({ onSelectClient }: SearchClientProps) {
                       <span className="flex items-center gap-1">
                         <Calendar className="h-3 w-3" />{" "}
                         {new Date(client.createdAt).toLocaleDateString(
-                          "fr-FR"
+                          LOCALE_MAP[lang]
                         )}
                       </span>
                     </div>

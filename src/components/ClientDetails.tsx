@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react"
 import { useStore, type Client, type OrderItem as OrderItemType } from "../lib/store"
 import { generateId } from "../lib/utils"
-import { useI18n } from "../lib/i18n"
+import { useI18n, LOCALE_MAP } from "../lib/i18n"
 import {
   createOrderOnSupabase,
   updateOrderOnSupabase,
@@ -48,7 +48,7 @@ interface ClientDetailsProps {
 
 export default function ClientDetails({ client, onClose }: ClientDetailsProps) {
   const { state, dispatch } = useStore()
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   const [showAddOrder, setShowAddOrder] = useState(false)
   const [items, setItems] = useState<OrderItemInput[]>([])
   const [saving, setSaving] = useState(false)
@@ -218,7 +218,7 @@ export default function ClientDetails({ client, onClose }: ClientDetailsProps) {
                   <Calendar className="h-4 w-4 text-muted shrink-0" />
                   <span>
                     {t("clientSince")}{" "}
-                    {new Date(client.createdAt).toLocaleDateString("fr-FR")}
+                    {new Date(client.createdAt).toLocaleDateString(LOCALE_MAP[lang])}
                   </span>
                 </div>
               </div>
@@ -351,7 +351,7 @@ export default function ClientDetails({ client, onClose }: ClientDetailsProps) {
                       >
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-xs text-muted">
-                            {new Date(order.date).toLocaleDateString("fr-FR", {
+                            {new Date(order.date).toLocaleDateString(LOCALE_MAP[lang], {
                               day: "2-digit",
                               month: "long",
                               year: "numeric",

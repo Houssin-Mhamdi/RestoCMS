@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { supabase } from "../lib/supabase"
+import { useI18n } from "../lib/i18n"
 import { Button } from "../components/ui/button"
 import { Input } from "../components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
@@ -8,6 +9,7 @@ import { UtensilsCrossed, KeyRound, CheckCircle } from "lucide-react"
 
 export default function ResetPassword() {
   const navigate = useNavigate()
+  const { t } = useI18n()
   const [password, setPassword] = useState("")
   const [confirm, setConfirm] = useState("")
   const [error, setError] = useState<string | null>(null)
@@ -33,11 +35,11 @@ export default function ResetPassword() {
     setError(null)
 
     if (password.length < 6) {
-      setError("Le mot de passe doit contenir au moins 6 caractères")
+      setError(t("passwordMinLength"))
       return
     }
     if (password !== confirm) {
-      setError("Les mots de passe ne correspondent pas")
+      setError(t("passwordMismatch"))
       return
     }
 
@@ -55,12 +57,10 @@ export default function ResetPassword() {
 
   if (!ready) {
     return (
-      <div className="min-h-screen bg-stone-100 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-surface flex items-center justify-center p-4">
         <Card className="w-full max-w-sm">
           <CardContent className="py-8 text-center">
-            <p className="text-muted text-sm">
-              Vérification du lien de réinitialisation...
-            </p>
+            <p className="text-muted text-sm">{t("verifyingLink")}</p>
           </CardContent>
         </Card>
       </div>
@@ -69,14 +69,12 @@ export default function ResetPassword() {
 
   if (done) {
     return (
-      <div className="min-h-screen bg-stone-100 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-surface flex items-center justify-center p-4">
         <Card className="w-full max-w-sm">
           <CardContent className="py-8 text-center space-y-4">
             <CheckCircle className="h-12 w-12 text-success mx-auto" />
-            <CardTitle className="text-stone-800">
-              Mot de passe mis à jour !
-            </CardTitle>
-            <p className="text-sm text-muted">Redirection vers la connexion...</p>
+            <CardTitle className="text-text">{t("passwordUpdated")}</CardTitle>
+            <p className="text-sm text-muted">{t("resetPasswordRedirect")}</p>
           </CardContent>
         </Card>
       </div>
@@ -84,23 +82,19 @@ export default function ResetPassword() {
   }
 
   return (
-    <div className="min-h-screen bg-stone-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-surface flex items-center justify-center p-4">
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-2">
             <UtensilsCrossed className="h-10 w-10 text-primary" />
           </div>
-          <CardTitle className="text-xl text-stone-800">
-            Nouveau mot de passe
-          </CardTitle>
-          <p className="text-sm text-muted">Choisissez un nouveau mot de passe</p>
+          <CardTitle className="text-xl text-text">{t("resetPassword")}</CardTitle>
+          <p className="text-sm text-muted">{t("forgotPasswordDesc")}</p>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-stone-700">
-                Nouveau mot de passe
-              </label>
+              <label className="text-sm font-medium text-text">{t("newPassword")}</label>
               <Input
                 type="password"
                 placeholder="••••••••"
@@ -110,9 +104,7 @@ export default function ResetPassword() {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-stone-700">
-                Confirmer le mot de passe
-              </label>
+              <label className="text-sm font-medium text-text">{t("confirmPassword")}</label>
               <Input
                 type="password"
                 placeholder="••••••••"
@@ -126,7 +118,7 @@ export default function ResetPassword() {
             )}
             <Button type="submit" className="w-full" disabled={loading}>
               <KeyRound className="h-4 w-4" />
-              {loading ? "Mise à jour..." : "Réinitialiser"}
+              {loading ? t("updateLoading") : t("resetPassword")}
             </Button>
           </form>
         </CardContent>

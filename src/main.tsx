@@ -5,6 +5,7 @@ import { ThemeProvider } from "./lib/theme"
 import { I18nProvider } from "./lib/i18n"
 import { AuthProvider } from "./lib/auth"
 import { StoreProvider } from "./lib/store"
+import { SettingsProvider } from "./lib/settings"
 import App from "./App"
 import "./index.css"
 
@@ -15,7 +16,9 @@ createRoot(document.getElementById("root")!).render(
         <I18nProvider>
           <AuthProvider>
             <StoreProvider>
-              <App />
+              <SettingsProvider>
+                <App />
+              </SettingsProvider>
             </StoreProvider>
           </AuthProvider>
         </I18nProvider>

@@ -228,3 +228,82 @@ export async function deleteProductOnSupabase(productId: string) {
     .eq("id", productId)
   if (error) throw error
 }
+
+/* ───── Calendar Events CRUD ───── */
+
+export interface CalendarEvent {
+  id: string
+  date: string
+  title: string
+  note: string
+  remindDays: number
+  createdAt: string
+}
+
+export async function loadCalendarEvents(): Promise<CalendarEvent[]> {
+  const { data, error } = await supabase
+    .from("calendar_events")
+    .select("*")
+    .order("date", { ascending: false })
+
+  if (error) throw error
+
+  return (data || []).map((e: any) => ({
+    id: e.id,
+    date: e.date,
+    title: e.title,
+    note: e.note || "",
+    remindDays: e.remind_days ?? 0,
+    createdAt: e.created_at,
+  }))
+}
+
+export async function createCalendarEventOnSupabase(event: {
+  id: string
+  date: string
+  title: string
+  note: string
+  remindDays: number
+}) {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) throw new Error("Not authenticated")
+
+  const { error } = await supabase.from("calendar_events").insert({
+    id: event.id,
+    user_id: user.id,
+    date: event.date,
+    title: event.title,
+    note: event.note,
+    remind_days: event.remindDays,
+  })
+  if (error) throw error
+}
+
+export async function deleteCalendarEventOnSupabase(eventId: string) {
+  const { error } = await supabase
+    .from("calendar_events")
+    .delete()
+    .eq("id", eventId)
+  if (error) throw error
+}
+
+export async function updateCalendarEventOnSupabase(event: {
+  id: string
+  date: string
+  title: string
+  note: string
+  remindDays: number
+}) {
+  const { error } = await supabase
+    .from("calendar_events")
+    .update({
+      date: event.date,
+      title: event.title,
+      note: event.note,
+      remind_days: event.remindDays,
+    })
+    .eq("id", event.id)
+  if (error) throw error
+}

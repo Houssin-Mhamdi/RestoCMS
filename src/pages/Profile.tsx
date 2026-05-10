@@ -2,6 +2,7 @@ import { useState, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import { supabase } from "../lib/supabase"
 import { useAuth } from "../lib/auth"
+import { useI18n, LOCALE_MAP } from "../lib/i18n"
 import { Button } from "../components/ui/button"
 import { Input } from "../components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
@@ -14,29 +15,63 @@ import {
   KeyRound,
   Camera,
   CheckCircle,
+  User,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react"
 
 export default function Profile() {
   const { user, signOut } = useAuth()
   const navigate = useNavigate()
+  const { t, lang } = useI18n()
   const fileRef = useRef<HTMLInputElement>(null)
 
-  // Password state
+  const [oldPassword, setOldPassword] = useState("")
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [pwError, setPwError] = useState<string | null>(null)
   const [pwLoading, setPwLoading] = useState(false)
   const [pwDone, setPwDone] = useState(false)
 
-  // Avatar state
+  const [displayName, setDisplayName] = useState(user?.user_metadata?.name || "")
+  const [nameSaving, setNameSaving] = useState(false)
+  const [nameDone, setNameDone] = useState(false)
+  const [nameError, setNameError] = useState<string | null>(null)
+
   const [avatarUrl, setAvatarUrl] = useState<string | null>(
     user?.user_metadata?.avatar_url || null
   )
   const [uploading, setUploading] = useState(false)
 
+  const [nameOpen, setNameOpen] = useState(true)
+  const [pwOpen, setPwOpen] = useState(false)
+
+  const locale = LOCALE_MAP[lang]
+
   const handleLogout = async () => {
     await signOut()
     navigate("/login")
+  }
+
+  const handleUpdateName = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setNameError(null)
+    setNameDone(false)
+    if (!displayName.trim()) {
+      setNameError(t("nameErrorEmpty"))
+      return
+    }
+    setNameSaving(true)
+    const { error } = await supabase.auth.updateUser({
+      data: { name: displayName.trim() },
+    })
+    setNameSaving(false)
+    if (error) {
+      setNameError(error.message)
+    } else {
+      setNameDone(true)
+      setTimeout(() => setNameDone(false), 3000)
+    }
   }
 
   const handleChangePassword = async (e: React.FormEvent) => {
@@ -44,16 +79,32 @@ export default function Profile() {
     setPwError(null)
     setPwDone(false)
 
+    if (!oldPassword) {
+      setPwError(t("passwordIncorrect"))
+      return
+    }
     if (newPassword.length < 6) {
-      setPwError("Le mot de passe doit contenir au moins 6 caractères")
+      setPwError(t("passwordMinLength"))
       return
     }
     if (newPassword !== confirmPassword) {
-      setPwError("Les mots de passe ne correspondent pas")
+      setPwError(t("passwordMismatch"))
       return
     }
 
     setPwLoading(true)
+
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: user?.email || "",
+      password: oldPassword,
+    })
+
+    if (signInError) {
+      setPwError(t("passwordIncorrect"))
+      setPwLoading(false)
+      return
+    }
+
     const { error } = await supabase.auth.updateUser({ password: newPassword })
     setPwLoading(false)
 
@@ -61,6 +112,7 @@ export default function Profile() {
       setPwError(error.message)
     } else {
       setPwDone(true)
+      setOldPassword("")
       setNewPassword("")
       setConfirmPassword("")
       setTimeout(() => setPwDone(false), 3000)
@@ -99,7 +151,7 @@ export default function Profile() {
   }
 
   return (
-    <div className="min-h-screen bg-stone-100 p-4">
+    <div className="min-h-screen bg-surface p-4">
       <div className="max-w-lg mx-auto space-y-4">
         <Card>
           <CardHeader>
@@ -107,7 +159,7 @@ export default function Profile() {
               <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
                 <ArrowLeft className="h-4 w-4" />
               </Button>
-              <CardTitle className="text-lg text-stone-800">Profil</CardTitle>
+              <CardTitle className="text-lg text-text">{t("profile")}</CardTitle>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -121,7 +173,7 @@ export default function Profile() {
                   />
                 ) : (
                   <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary text-2xl font-bold text-white">
-                    {user?.email?.charAt(0).toUpperCase()}
+                    {(displayName || user?.email || "?").charAt(0).toUpperCase()}
                   </div>
                 )}
                 <button
@@ -140,20 +192,23 @@ export default function Profile() {
                 />
               </div>
               {uploading && (
-                <p className="text-xs text-muted">Upload en cours...</p>
+                <p className="text-xs text-muted">{t("uploading")}</p>
+              )}
+              {displayName && (
+                <p className="text-sm font-semibold text-text">{displayName}</p>
               )}
             </div>
 
             <div className="rounded-lg bg-surface-alt p-4 space-y-3">
-              <div className="flex items-center gap-2 text-sm text-stone-700">
+              <div className="flex items-center gap-2 text-sm text-text">
                 <Mail className="h-4 w-4 text-muted" />
                 {user?.email}
               </div>
-              <div className="flex items-center gap-2 text-sm text-stone-700">
+              <div className="flex items-center gap-2 text-sm text-text">
                 <Calendar className="h-4 w-4 text-muted" />
-                Inscrit le{" "}
+                {t("memberSince")}{" "}
                 {user?.created_at
-                  ? new Date(user.created_at).toLocaleDateString("fr-FR")
+                  ? new Date(user.created_at).toLocaleDateString(locale)
                   : "—"}
               </div>
             </div>
@@ -161,54 +216,116 @@ export default function Profile() {
             <Separator />
 
             <div>
-              <h3 className="text-sm font-semibold text-stone-700 mb-3 flex items-center gap-2">
-                <KeyRound className="h-4 w-4 text-primary" />
-                Changer le mot de passe
-              </h3>
-              <form onSubmit={handleChangePassword} className="space-y-3">
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-stone-600">
-                    Nouveau mot de passe
-                  </label>
-                  <Input
-                    type="password"
-                    placeholder="••••••••"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-stone-600">
-                    Confirmer le mot de passe
-                  </label>
-                  <Input
-                    type="password"
-                    placeholder="••••••••"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    required
-                  />
-                </div>
-                {pwError && (
-                  <p className="text-xs text-danger">{pwError}</p>
-                )}
-                {pwDone && (
-                  <p className="text-xs text-success flex items-center gap-1">
-                    <CheckCircle className="h-3 w-3" />
-                    Mot de passe mis à jour !
-                  </p>
-                )}
-                <Button
-                  type="submit"
-                  size="sm"
-                  disabled={pwLoading}
-                  className="w-full"
-                >
-                  <KeyRound className="h-3 w-3" />
-                  {pwLoading ? "Mise à jour..." : "Mettre à jour"}
-                </Button>
-              </form>
+              <button
+                type="button"
+                onClick={() => setNameOpen(!nameOpen)}
+                className="flex w-full items-center justify-between text-sm font-semibold text-text mb-1"
+              >
+                <span className="flex items-center gap-2">
+                  <User className="h-4 w-4 text-primary" />
+                  {t("displayName")}
+                </span>
+                {nameOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+              </button>
+              {nameOpen && (
+                <form onSubmit={handleUpdateName} className="space-y-3 pt-2">
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-muted">{t("displayName")}</label>
+                    <Input
+                      value={displayName}
+                      onChange={(e) => setDisplayName(e.target.value)}
+                      placeholder={t("namePlaceholder")}
+                      required
+                    />
+                  </div>
+                  {nameError && (
+                    <p className="text-xs text-danger">{nameError}</p>
+                  )}
+                  {nameDone && (
+                    <p className="text-xs text-success flex items-center gap-1">
+                      <CheckCircle className="h-3 w-3" />
+                      {t("nameUpdated")}
+                    </p>
+                  )}
+                  <Button
+                    type="submit"
+                    size="sm"
+                    disabled={nameSaving}
+                    className="w-full"
+                  >
+                    <User className="h-3 w-3" />
+                    {nameSaving ? t("updateLoading") : t("save")}
+                  </Button>
+                </form>
+              )}
+            </div>
+
+            <Separator />
+
+            <div>
+              <button
+                type="button"
+                onClick={() => setPwOpen(!pwOpen)}
+                className="flex w-full items-center justify-between text-sm font-semibold text-text mb-1"
+              >
+                <span className="flex items-center gap-2">
+                  <KeyRound className="h-4 w-4 text-primary" />
+                  {t("changePassword")}
+                </span>
+                {pwOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+              </button>
+              {pwOpen && (
+                <form onSubmit={handleChangePassword} className="space-y-3 pt-2">
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-muted">{t("oldPassword")}</label>
+                    <Input
+                      type="password"
+                      placeholder="••••••••"
+                      value={oldPassword}
+                      onChange={(e) => setOldPassword(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-muted">{t("newPassword")}</label>
+                    <Input
+                      type="password"
+                      placeholder="••••••••"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-muted">{t("confirmPassword")}</label>
+                    <Input
+                      type="password"
+                      placeholder="••••••••"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      required
+                    />
+                  </div>
+                  {pwError && (
+                    <p className="text-xs text-danger">{pwError}</p>
+                  )}
+                  {pwDone && (
+                    <p className="text-xs text-success flex items-center gap-1">
+                      <CheckCircle className="h-3 w-3" />
+                      {t("passwordUpdated")}
+                    </p>
+                  )}
+                  <Button
+                    type="submit"
+                    size="sm"
+                    disabled={pwLoading}
+                    className="w-full"
+                  >
+                    <KeyRound className="h-3 w-3" />
+                    {pwLoading ? t("updateLoading") : t("update")}
+                  </Button>
+                </form>
+              )}
             </div>
 
             <Separator />
@@ -219,7 +336,7 @@ export default function Profile() {
               className="w-full"
             >
               <LogOut className="h-4 w-4" />
-              Se déconnecter
+              {t("logout")}
             </Button>
           </CardContent>
         </Card>

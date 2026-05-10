@@ -13,6 +13,8 @@ import {
   ClipboardList,
   UtensilsCrossed,
   Package,
+  Settings,
+  CalendarDays,
 } from "lucide-react"
 
 const navItems = [
@@ -20,6 +22,8 @@ const navItems = [
   { to: "/create", labelKey: "newClient", icon: ClipboardList },
   { to: "/search", labelKey: "search", icon: Users },
   { to: "/products", labelKey: "products", icon: Package },
+  { to: "/calendar", labelKey: "calendar", icon: CalendarDays },
+  { to: "/settings", labelKey: "settings", icon: Settings },
 ]
 
 export default function Sidebar() {

@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { useI18n } from "../lib/i18n"
+import { useI18n, LOCALE_MAP } from "../lib/i18n"
 import { Button } from "./ui/button"
 import { Download, FileText, FileSpreadsheet } from "lucide-react"
 import jsPDF from "jspdf"
@@ -14,7 +14,7 @@ export default function ExportButton({
   data,
   filename = "rapport",
 }: ExportButtonProps) {
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   const [open, setOpen] = useState(false)
 
   const exportPdf = () => {
@@ -24,7 +24,7 @@ export default function ExportButton({
       head: [["Client", "Date", "Articles", "Total"]],
       body: data.map((r) => [
         r.clientName,
-        new Date(r.date).toLocaleDateString("fr-FR"),
+        new Date(r.date).toLocaleDateString(LOCALE_MAP[lang]),
         r.items,
         `${r.total.toLocaleString()} DA`,
       ]),
@@ -39,7 +39,7 @@ export default function ExportButton({
     const rows = data
       .map(
         (r) =>
-          `${r.clientName};${new Date(r.date).toLocaleDateString("fr-FR")};"${r.items}";${r.total}`
+          `${r.clientName};${new Date(r.date).toLocaleDateString(LOCALE_MAP[lang])};"${r.items}";${r.total}`
       )
       .join("\n")
     const bom = "\uFEFF"

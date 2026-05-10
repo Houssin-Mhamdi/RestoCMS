@@ -39,6 +39,15 @@
 
 .dark .bg-stone-50 { background-color: #292524; }
 
+.dark .bg-blue-50 { background-color: #1e3a5f; }
+.dark .bg-green-50 { background-color: #14532d; }
+.dark .bg-amber-50 { background-color: #451a03; }
+
+.dark .text-blue-600 { color: #60a5fa; }
+
+.dark .hover\:bg-red-50:hover { background-color: #450a0a; }
+.dark .dark\:hover\:bg-red-950:hover { background-color: #450a0a; }
+
 body {
   margin: 0;
   font-family: 'Inter', system-ui, -apple-system, sans-serif;

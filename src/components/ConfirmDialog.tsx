@@ -28,10 +28,10 @@ export default function ConfirmDialog({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle className="text-lg text-stone-800">{title}</CardTitle>
+          <CardTitle className="text-lg text-text">{title}</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-stone-600">{message}</p>
+          <p className="text-sm text-muted">{message}</p>
         </CardContent>
         <CardFooter className="flex justify-end gap-2">
           <Button variant="outline" onClick={onCancel}>

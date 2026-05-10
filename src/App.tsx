@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react"
 import { Routes, Route, Navigate, useNavigate } from "react-router-dom"
 import { useAuth } from "./lib/auth"
+import { useI18n } from "./lib/i18n"
 import { useStore, type Client } from "./lib/store"
 import { loadClients, loadProducts } from "./lib/supabase-service"
 import Sidebar from "./components/Sidebar"
@@ -10,6 +11,8 @@ import CreateClient from "./components/CreateClient"
 import SearchClient from "./components/SearchClient"
 import ClientDetails from "./components/ClientDetails"
 import ManageProducts from "./pages/ManageProducts"
+import CalendarPage from "./pages/CalendarPage"
+import SettingsPage from "./pages/Settings"
 import Login from "./pages/Login"
 import Signup from "./pages/Signup"
 import Profile from "./pages/Profile"
@@ -19,6 +22,7 @@ import ResetPassword from "./pages/ResetPassword"
 function ProtectedLayout() {
   const { state, dispatch } = useStore()
   const navigate = useNavigate()
+  const { t } = useI18n()
   const [dataLoading, setDataLoading] = useState(true)
 
   useEffect(() => {
@@ -60,7 +64,7 @@ function ProtectedLayout() {
   if (dataLoading) {
     return (
       <div className="min-h-screen bg-surface flex items-center justify-center">
-        <p className="text-muted text-sm">Chargement...</p>
+        <p className="text-muted text-sm">{t("loading")}</p>
       </div>
     )
   }
@@ -89,6 +93,8 @@ function ProtectedLayout() {
               element={<SearchClient onSelectClient={handleSelectClient} />}
             />
             <Route path="/products" element={<ManageProducts />} />
+            <Route path="/calendar" element={<CalendarPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
           </Routes>
         </main>
       </div>
@@ -105,11 +111,12 @@ function ProtectedLayout() {
 
 export default function App() {
   const { user, loading } = useAuth()
+  const { t } = useI18n()
 
   if (loading) {
     return (
       <div className="min-h-screen bg-surface flex items-center justify-center">
-        <p className="text-muted text-sm">Chargement...</p>
+        <p className="text-muted text-sm">{t("loading")}</p>
       </div>
     )
   }

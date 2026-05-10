@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { useAuth } from "../lib/auth"
+import { useI18n } from "../lib/i18n"
 import { Button } from "../components/ui/button"
 import { Input } from "../components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
@@ -9,6 +10,7 @@ import { UtensilsCrossed, LogIn } from "lucide-react"
 export default function Login() {
   const { signIn } = useAuth()
   const navigate = useNavigate()
+  const { t } = useI18n()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
@@ -28,33 +30,29 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-stone-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-surface flex items-center justify-center p-4">
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-2">
             <UtensilsCrossed className="h-10 w-10 text-primary" />
           </div>
-          <CardTitle className="text-xl text-stone-800">Connexion</CardTitle>
-          <p className="text-sm text-muted">Connectez-vous à RestoCMS</p>
+          <CardTitle className="text-xl text-text">{t("login")}</CardTitle>
+          <p className="text-sm text-muted">{t("loginDesc")}</p>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-stone-700">
-                Email
-              </label>
+              <label className="text-sm font-medium text-text">{t("email")}</label>
               <Input
                 type="email"
-                placeholder="vous@exemple.com"
+                placeholder={t("emailPlaceholder")}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-stone-700">
-                Mot de passe
-              </label>
+              <label className="text-sm font-medium text-text">{t("password")}</label>
               <Input
                 type="password"
                 placeholder="••••••••"
@@ -68,7 +66,7 @@ export default function Login() {
             )}
             <Button type="submit" className="w-full" disabled={loading}>
               <LogIn className="h-4 w-4" />
-              {loading ? "Connexion..." : "Se connecter"}
+              {loading ? t("loginLoading") : t("loginButton")}
             </Button>
           </form>
           <div className="mt-4 space-y-2 text-center text-sm">
@@ -77,16 +75,16 @@ export default function Login() {
                 to="/forgot-password"
                 className="text-muted hover:text-primary hover:underline"
               >
-                Mot de passe oublié ?
+                {t("forgotPasswordLink")}
               </Link>
             </p>
             <p className="text-muted">
-              Pas encore de compte ?{" "}
+              {t("noAccount")}{" "}
               <Link
                 to="/signup"
                 className="text-primary font-medium hover:underline"
               >
-                S&apos;inscrire
+                {t("signupButton")}
               </Link>
             </p>
           </div>
