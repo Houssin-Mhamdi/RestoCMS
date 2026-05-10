@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from "react"
 import { useStore } from "../lib/store"
 import { useI18n, LOCALE_MAP } from "../lib/i18n"
+import { useSettings } from "../lib/settings"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Input } from "./ui/input"
 import Pagination from "./ui/pagination"
@@ -36,6 +37,7 @@ export default function Dashboard() {
   const { state } = useStore()
   const navigate = useNavigate()
   const { t, lang } = useI18n()
+  const { activeRestaurant } = useSettings()
   const locale = LOCALE_MAP[lang]
   const [page, setPage] = useState(1)
   const [dateFrom, setDateFrom] = useState("")
@@ -48,7 +50,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     setTodayEventsLoading(true)
-    loadCalendarEvents()
+    loadCalendarEvents(activeRestaurant.id)
       .then((events) => {
         allEventsRef.current = events
         return events
@@ -56,7 +58,7 @@ export default function Dashboard() {
       .then(filterEvents)
       .catch(console.error)
       .finally(() => setTodayEventsLoading(false))
-  }, [])
+  }, [activeRestaurant.id])
 
   function filterEvents(events: CalendarEvent[]) {
     const today = new Date()
@@ -126,7 +128,7 @@ export default function Dashboard() {
       },
       {
         key: "revenue",
-        value: `${totalRev.toLocaleString()} DA`,
+        value: `${totalRev.toLocaleString()} ${activeRestaurant.currency}`,
         icon: DollarSign,
         color: "text-success",
         bg: "bg-green-50",
@@ -134,8 +136,8 @@ export default function Dashboard() {
       {
         key: "avgPerOrder",
         value: filteredOrders.length
-          ? `${(totalRev / filteredOrders.length).toFixed(0)} DA`
-          : "0 DA",
+          ? `${(totalRev / filteredOrders.length).toFixed(0)} ${activeRestaurant.currency}`
+          : `0 ${activeRestaurant.currency}`,
         icon: TrendingUp,
         color: "text-accent",
         bg: "bg-amber-50",
@@ -214,6 +216,33 @@ export default function Dashboard() {
         quantity: qty,
       }))
   }, [filteredOrders, topN])
+
+  // Revenue by day-of-week
+  const revenueByDay = useMemo(() => {
+    const days = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"]
+    const map = new Map<string, number>()
+    for (const o of filteredOrders) {
+      const day = days[new Date(o.date).getDay()]
+      map.set(day, (map.get(day) || 0) + o.total)
+    }
+    return days.map((d) => ({ day: d, revenue: map.get(d) || 0 }))
+  }, [filteredOrders])
+
+  // Avg order value by day
+  const avgOrderTrend = useMemo(() => {
+    const days = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"]
+    const countMap = new Map<string, number>()
+    const totalMap = new Map<string, number>()
+    for (const o of filteredOrders) {
+      const day = days[new Date(o.date).getDay()]
+      countMap.set(day, (countMap.get(day) || 0) + 1)
+      totalMap.set(day, (totalMap.get(day) || 0) + o.total)
+    }
+    return days.map((d) => ({
+      day: d,
+      avg: countMap.get(d) ? Math.round(totalMap.get(d)! / countMap.get(d)!) : 0,
+    }))
+  }, [filteredOrders])
 
   const exportData = useMemo(
     () =>
@@ -406,7 +435,7 @@ export default function Dashboard() {
                     />
                     <Tooltip
                       formatter={(value: unknown) => [
-                        `${(value as number).toLocaleString()} DA`,
+                        `${(value as number).toLocaleString()} ${activeRestaurant.currency}`,
                         t("revenue"),
                       ]}
                       contentStyle={{
@@ -423,6 +452,56 @@ export default function Dashboard() {
                       dot={{ r: 3, fill: "#ea580c" }}
                       activeDot={{ r: 5 }}
                     />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-semibold text-stone-800">
+              {t("revenue")} par jour
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {!hasData ? (
+              <p className="text-sm text-muted text-center py-8">{t("noData")}</p>
+            ) : (
+              <div className="h-48">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={revenueByDay}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e7e5e4" />
+                    <XAxis dataKey="day" tick={{ fontSize: 11, fill: "#a8a29e" }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 11, fill: "#a8a29e" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                    <Tooltip formatter={(v: unknown) => [`${(v as number).toLocaleString()} ${activeRestaurant.currency}`, t("revenue")]} contentStyle={{ borderRadius: 8, border: "1px solid #e7e5e4", fontSize: 12 }} />
+                    <Bar dataKey="revenue" fill="#10b981" radius={[4, 4, 0, 0]} barSize={28} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-semibold text-stone-800">
+              {t("avgPerOrder")} par jour
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {!hasData ? (
+              <p className="text-sm text-muted text-center py-8">{t("noData")}</p>
+            ) : (
+              <div className="h-48">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={avgOrderTrend}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e7e5e4" />
+                    <XAxis dataKey="day" tick={{ fontSize: 11, fill: "#a8a29e" }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 11, fill: "#a8a29e" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                    <Tooltip formatter={(v: unknown) => [`${(v as number).toLocaleString()} ${activeRestaurant.currency}`, t("avgPerOrder")]} contentStyle={{ borderRadius: 8, border: "1px solid #e7e5e4", fontSize: 12 }} />
+                    <Line type="monotone" dataKey="avg" stroke="#8b5cf6" strokeWidth={2} dot={{ r: 3, fill: "#8b5cf6" }} activeDot={{ r: 5 }} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -463,7 +542,7 @@ export default function Dashboard() {
                     />
                     <Tooltip
                       formatter={(value: unknown) => [
-                        `${(value as number).toLocaleString()} DA`,
+                        `${(value as number).toLocaleString()} ${activeRestaurant.currency}`,
                         t("total"),
                       ]}
                       contentStyle={{
@@ -552,7 +631,7 @@ export default function Dashboard() {
                       </p>
                     </div>
                     <span className="text-sm font-semibold text-primary">
-                      {order.total.toLocaleString()} DA
+                      {order.total.toLocaleString()} {activeRestaurant.currency}
                     </span>
                   </div>
                 ))}

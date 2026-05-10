@@ -2,6 +2,7 @@ import { useState, useMemo } from "react"
 import { useStore } from "../lib/store"
 import { generateId } from "../lib/utils"
 import { useI18n } from "../lib/i18n"
+import { useSettings } from "../lib/settings"
 import { createClientOnSupabase } from "../lib/supabase-service"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
@@ -25,6 +26,7 @@ function createItem(name = "", price = 0): OrderItemInput {
 export default function CreateClient() {
   const { state, dispatch } = useStore()
   const { t } = useI18n()
+  const { activeRestaurant } = useSettings()
   const [name, setName] = useState("")
   const [lastname, setLastname] = useState("")
   const [phone, setPhone] = useState("")
@@ -105,7 +107,7 @@ export default function CreateClient() {
 
     setSaving(true)
     try {
-      await createClientOnSupabase(newClient)
+      await createClientOnSupabase(newClient, activeRestaurant.id)
       dispatch({ type: "ADD_CLIENT", payload: newClient })
       resetForm()
     } catch (err) {
@@ -232,7 +234,7 @@ export default function CreateClient() {
               </div>
               <div className="w-24 space-y-2 shrink-0">
                 <label className="text-xs font-medium text-stone-600">
-                  {t("price")} (DA)
+                  {t("price")} ({activeRestaurant.currency})
                 </label>
                 <Input
                   type="number"
@@ -267,7 +269,7 @@ export default function CreateClient() {
             <div className="flex justify-between items-center pt-2">
               <span className="text-sm text-stone-600">{t("total")}</span>
               <span className="text-lg font-bold text-primary">
-                {total.toLocaleString()} DA
+                {total.toLocaleString()} {activeRestaurant.currency}
               </span>
             </div>
           )}

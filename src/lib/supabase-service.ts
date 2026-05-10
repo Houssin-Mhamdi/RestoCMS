@@ -4,6 +4,7 @@ import type { OrderItem, Client, Product } from "./store"
 export interface DbClient {
   id: string
   user_id: string
+  restaurant_id: string
   name: string
   lastname: string
   phone: string
@@ -15,15 +16,17 @@ export interface DbOrder {
   id: string
   client_id: string
   user_id: string
+  restaurant_id: string
   items: OrderItem[]
   total: number
   created_at: string
 }
 
-export async function loadClients(): Promise<Client[]> {
+export async function loadClients(restaurantId: string): Promise<Client[]> {
   const { data: dbClients, error: clientErr } = await supabase
     .from("clients")
     .select("*")
+    .eq("restaurant_id", restaurantId)
     .order("created_at", { ascending: false })
 
   if (clientErr) throw clientErr
@@ -31,6 +34,7 @@ export async function loadClients(): Promise<Client[]> {
   const { data: dbOrders, error: orderErr } = await supabase
     .from("orders")
     .select("*")
+    .eq("restaurant_id", restaurantId)
     .order("created_at", { ascending: false })
 
   if (orderErr) throw orderErr
@@ -60,7 +64,8 @@ export async function loadClients(): Promise<Client[]> {
 }
 
 export async function createClientOnSupabase(
-  client: Omit<Client, "orders" | "createdAt"> & { orders?: Client["orders"] }
+  client: Omit<Client, "orders" | "createdAt"> & { orders?: Client["orders"] },
+  restaurantId: string
 ): Promise<string> {
   const {
     data: { user },
@@ -72,6 +77,7 @@ export async function createClientOnSupabase(
     .insert({
       id: client.id,
       user_id: user.id,
+      restaurant_id: restaurantId,
       name: client.name,
       lastname: client.lastname,
       phone: client.phone,
@@ -90,7 +96,7 @@ export async function createClientOnSupabase(
         items: order.items,
         total: order.total,
         date: order.date,
-      })
+      }, restaurantId)
     }
   }
 
@@ -103,7 +109,7 @@ export async function createOrderOnSupabase(order: {
   items: OrderItem[]
   total: number
   date: string
-}) {
+}, restaurantId: string) {
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -113,6 +119,7 @@ export async function createOrderOnSupabase(order: {
     id: order.id,
     client_id: order.clientId,
     user_id: user.id,
+    restaurant_id: restaurantId,
     items: order.items,
     total: order.total,
     created_at: order.date,
@@ -170,10 +177,12 @@ export async function deleteOrderOnSupabase(orderId: string) {
 
 /* ───── Product CRUD ───── */
 
-export async function loadProducts(): Promise<Product[]> {
+export async function loadProducts(restaurantId: string): Promise<Product[]> {
   const { data, error } = await supabase
     .from("products")
     .select("*")
+    .eq("restaurant_id", restaurantId)
+    .order("sort_order", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: false })
 
   if (error) throw error
@@ -183,6 +192,8 @@ export async function loadProducts(): Promise<Product[]> {
     name: p.name,
     price: p.price,
     imageUrl: p.image_url || "",
+    category: p.category || "",
+    sortOrder: p.sort_order ?? 0,
     createdAt: p.created_at,
   }))
 }
@@ -192,7 +203,9 @@ export async function createProductOnSupabase(product: {
   name: string
   price: number
   imageUrl: string
-}) {
+  category: string
+  sortOrder: number
+}, restaurantId: string) {
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -201,9 +214,12 @@ export async function createProductOnSupabase(product: {
   const { error } = await supabase.from("products").insert({
     id: product.id,
     user_id: user.id,
+    restaurant_id: restaurantId,
     name: product.name,
     price: product.price,
     image_url: product.imageUrl,
+    category: product.category,
+    sort_order: product.sortOrder,
   })
   if (error) throw error
 }
@@ -213,10 +229,18 @@ export async function updateProductOnSupabase(product: {
   name: string
   price: number
   imageUrl: string
+  category: string
+  sortOrder: number
 }) {
   const { error } = await supabase
     .from("products")
-    .update({ name: product.name, price: product.price, image_url: product.imageUrl })
+    .update({
+      name: product.name,
+      price: product.price,
+      image_url: product.imageUrl,
+      category: product.category,
+      sort_order: product.sortOrder,
+    })
     .eq("id", product.id)
   if (error) throw error
 }
@@ -240,10 +264,11 @@ export interface CalendarEvent {
   createdAt: string
 }
 
-export async function loadCalendarEvents(): Promise<CalendarEvent[]> {
+export async function loadCalendarEvents(restaurantId: string): Promise<CalendarEvent[]> {
   const { data, error } = await supabase
     .from("calendar_events")
     .select("*")
+    .eq("restaurant_id", restaurantId)
     .order("date", { ascending: false })
 
   if (error) throw error
@@ -264,7 +289,7 @@ export async function createCalendarEventOnSupabase(event: {
   title: string
   note: string
   remindDays: number
-}) {
+}, restaurantId: string) {
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -273,6 +298,7 @@ export async function createCalendarEventOnSupabase(event: {
   const { error } = await supabase.from("calendar_events").insert({
     id: event.id,
     user_id: user.id,
+    restaurant_id: restaurantId,
     date: event.date,
     title: event.title,
     note: event.note,
@@ -305,5 +331,89 @@ export async function updateCalendarEventOnSupabase(event: {
       remind_days: event.remindDays,
     })
     .eq("id", event.id)
+  if (error) throw error
+}
+
+/* ───── Restaurant CRUD ───── */
+
+export interface DbRestaurant {
+  id: string
+  name: string
+  currency: string
+  color: string
+  logo: string
+  table_count: number
+  dark_mode: boolean
+}
+
+export async function loadRestaurants(): Promise<DbRestaurant[]> {
+  const { data, error } = await supabase
+    .from("restaurants")
+    .select("*")
+    .order("created_at", { ascending: true })
+  if (error) throw error
+  return (data || []).map((r: any) => ({
+    id: r.id,
+    name: r.name,
+    currency: r.currency,
+    color: r.color,
+    logo: r.logo || "",
+    table_count: r.table_count ?? 0,
+    dark_mode: r.dark_mode ?? false,
+  }))
+}
+
+export async function createRestaurantOnSupabase(r: {
+  id: string
+  name: string
+  currency: string
+  color: string
+  logo: string
+  tableCount: number
+  darkMode: boolean
+}) {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error("Not authenticated")
+  const { error } = await supabase.from("restaurants").insert({
+    id: r.id,
+    user_id: user.id,
+    name: r.name,
+    currency: r.currency,
+    color: r.color,
+    logo: r.logo,
+    table_count: r.tableCount,
+    dark_mode: r.darkMode,
+  })
+  if (error) throw error
+}
+
+export async function updateRestaurantOnSupabase(r: {
+  id: string
+  name: string
+  currency: string
+  color: string
+  logo: string
+  tableCount: number
+  darkMode: boolean
+}) {
+  const { error } = await supabase
+    .from("restaurants")
+    .update({
+      name: r.name,
+      currency: r.currency,
+      color: r.color,
+      logo: r.logo,
+      table_count: r.tableCount,
+      dark_mode: r.darkMode,
+    })
+    .eq("id", r.id)
+  if (error) throw error
+}
+
+export async function deleteRestaurantOnSupabase(id: string) {
+  const { error } = await supabase
+    .from("restaurants")
+    .delete()
+    .eq("id", id)
   if (error) throw error
 }

@@ -3,9 +3,10 @@ import { useNavigate } from "react-router-dom"
 import { useAuth } from "../lib/auth"
 import { useTheme } from "../lib/theme"
 import { useI18n, type Lang } from "../lib/i18n"
+import { useSettings } from "../lib/settings"
 import { useStore } from "../lib/store"
 import { Button } from "./ui/button"
-import { Input } from "./ui/input"
+import ConfirmDialog from "./ConfirmDialog"
 import {
   Bell,
   CalendarDays,
@@ -21,36 +22,44 @@ import {
   Users,
   Package,
   ClipboardList,
+  Building2,
+  Plus,
+  Check,
+  Trash2,
 } from "lucide-react"
 
 export default function TopNav() {
   const { user, signOut } = useAuth()
   const { theme, toggle: toggleTheme } = useTheme()
   const { lang, setLang, t } = useI18n()
+  const { activeRestaurant, restaurants, switchRestaurant, deleteRestaurant } = useSettings()
   const { state, dispatch } = useStore()
   const navigate = useNavigate()
   const [profileOpen, setProfileOpen] = useState(false)
   const [langOpen, setLangOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
+  const [restaurantOpen, setRestaurantOpen] = useState(false)
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const searchRef = useRef<HTMLDivElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const profileRef = useRef<HTMLDivElement>(null)
   const langRef = useRef<HTMLDivElement>(null)
+  const restaurantRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
+      const target = e.target as Node
       if (
-        profileRef.current &&
-        !profileRef.current.contains(e.target as Node) &&
-        langRef.current &&
-        !langRef.current.contains(e.target as Node) &&
-        searchRef.current &&
-        !searchRef.current.contains(e.target as Node)
+        profileRef.current && !profileRef.current.contains(target) &&
+        langRef.current && !langRef.current.contains(target) &&
+        searchRef.current && !searchRef.current.contains(target) &&
+        restaurantRef.current && !restaurantRef.current.contains(target)
       ) {
         setProfileOpen(false)
         setLangOpen(false)
         setSearchOpen(false)
+        setRestaurantOpen(false)
       }
     }
     document.addEventListener("mousedown", handleClick)
@@ -63,9 +72,9 @@ export default function TopNav() {
     }
   }, [searchOpen])
 
-  const initials = user?.email
-    ? user.email.substring(0, 2).toUpperCase()
-    : "??"
+  const displayName = user?.user_metadata?.name || user?.email || ""
+  const avatarUrl = user?.user_metadata?.avatar_url || null
+  const initials = displayName.substring(0, 2).toUpperCase()
 
   const handleLogout = async () => {
     setProfileOpen(false)
@@ -93,7 +102,7 @@ export default function TopNav() {
 
     for (const p of state.products) {
       if (p.name.toLowerCase().includes(q)) {
-        results.push({ label: p.name, sublabel: `${p.price} DA`, to: "/products", icon: Package })
+        results.push({ label: p.name, sublabel: `${p.price} ${activeRestaurant.currency}`, to: "/products", icon: Package })
       }
     }
 
@@ -103,7 +112,7 @@ export default function TopNav() {
         if (itemNames.toLowerCase().includes(q) || `${c.name} ${c.lastname}`.toLowerCase().includes(q)) {
           results.push({
             label: `${c.name} ${c.lastname}`,
-            sublabel: `${o.total.toLocaleString()} DA — ${new Date(o.date).toLocaleDateString()}`,
+            sublabel: `${o.total.toLocaleString()} ${activeRestaurant.currency} — ${new Date(o.date).toLocaleDateString()}`,
             to: "/search",
             icon: ClipboardList,
           })
@@ -113,7 +122,7 @@ export default function TopNav() {
     }
 
     return results.slice(0, 10)
-  }, [searchQuery, state.clients, state.products])
+  }, [searchQuery, state.clients, state.products, activeRestaurant.currency])
 
   function handleSearchSelect(to: string) {
     setSearchOpen(false)
@@ -123,11 +132,11 @@ export default function TopNav() {
 
   return (
     <header className="sticky top-0 z-20 flex h-14 items-center justify-between gap-3 border-b border-border bg-card px-4">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 min-w-0">
         <Button
           variant="ghost"
           size="icon"
-          className="lg:hidden text-muted hover:text-stone-700"
+          className="lg:hidden text-muted hover:text-stone-700 shrink-0"
           onClick={() => dispatch({ type: "TOGGLE_SIDEBAR" })}
         >
           {state.sidebarOpen ? (
@@ -136,7 +145,62 @@ export default function TopNav() {
             <Menu className="h-5 w-5" />
           )}
         </Button>
-        <div className="relative hidden sm:block" ref={searchRef}>
+
+        <div className="relative shrink-0" ref={restaurantRef}>
+          <button
+            onClick={() => setRestaurantOpen(!restaurantOpen)}
+            className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-surface-alt transition-colors text-sm font-semibold text-text max-w-[140px] lg:max-w-[200px]"
+          >
+            {activeRestaurant.logo ? (
+              <img src={activeRestaurant.logo} alt="" className="h-5 w-5 rounded object-contain shrink-0" />
+            ) : (
+              <Building2 className="h-4 w-4 text-primary shrink-0" />
+            )}
+            <span className="truncate">{activeRestaurant.name}</span>
+            <svg className="h-3 w-3 text-muted shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          {restaurantOpen && (
+            <div className="absolute left-0 top-full z-30 mt-1 w-52 rounded-lg border border-border bg-card shadow-lg py-1">
+              {restaurants.map((r) => (
+                <div key={r.id} className="flex items-center group">
+                  <button
+                    onClick={() => { switchRestaurant(r.id); setRestaurantOpen(false) }}
+                    className="flex flex-1 items-center gap-2 px-3 py-2 text-sm text-text hover:bg-surface-alt transition-colors text-left min-w-0"
+                  >
+                    {r.logo ? (
+                      <img src={r.logo} alt="" className="h-5 w-5 rounded object-contain shrink-0" />
+                    ) : (
+                      <Building2 className="h-4 w-4 text-primary shrink-0" />
+                    )}
+                    <span className="truncate flex-1">{r.name}</span>
+                    {r.id === activeRestaurant.id && (
+                      <Check className="h-3.5 w-3.5 text-primary shrink-0" />
+                    )}
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(r.id) }}
+                    className="p-2 text-muted hover:text-danger opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                    title={t("delete")}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
+              <div className="border-t border-border my-1" />
+              <button
+                onClick={() => { setRestaurantOpen(false); navigate("/create-restaurant") }}
+                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-primary hover:bg-surface-alt transition-colors"
+              >
+                <Plus className="h-4 w-4" />
+                {t("createRestaurant")}
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="relative hidden sm:block flex-1 max-w-xs" ref={searchRef}>
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
             <input
@@ -146,11 +210,11 @@ export default function TopNav() {
               onChange={(e) => { setSearchQuery(e.target.value); setSearchOpen(true) }}
               onFocus={() => setSearchOpen(true)}
               placeholder={t("searchAll")}
-              className="h-9 w-56 lg:w-72 rounded-lg border border-border bg-surface pl-8 pr-3 text-sm text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary"
+              className="h-9 w-full rounded-lg border border-border bg-surface pl-8 pr-3 text-sm text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
           {searchOpen && searchQuery.trim() && (
-            <div className="absolute left-0 top-full z-30 mt-1 w-full rounded-lg border border-border bg-card shadow-lg py-1 max-h-72 overflow-y-auto">
+            <div className="absolute left-0 top-full z-30 mt-1 w-full min-w-[280px] rounded-lg border border-border bg-card shadow-lg py-1 max-h-72 overflow-y-auto">
               {searchResults.length === 0 ? (
                 <p className="px-3 py-2 text-xs text-muted">{t("noResults")}</p>
               ) : (
@@ -176,7 +240,7 @@ export default function TopNav() {
         </div>
       </div>
 
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 shrink-0">
         <button
           onClick={() => setSearchOpen(!searchOpen)}
           className="sm:hidden p-2 text-muted hover:text-stone-700"
@@ -232,9 +296,13 @@ export default function TopNav() {
         <div className="relative" ref={profileRef}>
           <button
             onClick={() => setProfileOpen(!profileOpen)}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-sm font-bold text-white hover:bg-primary-hover transition-colors"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-sm font-bold text-white hover:bg-primary-hover transition-colors overflow-hidden"
           >
-            {initials}
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+            ) : (
+              initials
+            )}
           </button>
           {profileOpen && (
             <div className="absolute right-0 top-full z-30 mt-2 w-44 rounded-lg border border-border bg-card shadow-lg py-1">
@@ -263,6 +331,19 @@ export default function TopNav() {
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={!!deleteConfirmId}
+        title={t("delete")}
+        message={`${t("deleteConfirm")} "${restaurants.find((r) => r.id === deleteConfirmId)?.name}" ?`}
+        confirmLabel={t("delete")}
+        cancelLabel={t("cancel")}
+        onConfirm={() => {
+          if (deleteConfirmId) deleteRestaurant(deleteConfirmId)
+          setDeleteConfirmId(null)
+        }}
+        onCancel={() => setDeleteConfirmId(null)}
+      />
     </header>
   )
 }

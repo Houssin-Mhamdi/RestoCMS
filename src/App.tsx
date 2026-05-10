@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react"
 import { Routes, Route, Navigate, useNavigate } from "react-router-dom"
 import { useAuth } from "./lib/auth"
 import { useI18n } from "./lib/i18n"
+import { useSettings } from "./lib/settings"
 import { useStore, type Client } from "./lib/store"
 import { loadClients, loadProducts } from "./lib/supabase-service"
 import Sidebar from "./components/Sidebar"
@@ -13,6 +14,7 @@ import ClientDetails from "./components/ClientDetails"
 import ManageProducts from "./pages/ManageProducts"
 import CalendarPage from "./pages/CalendarPage"
 import SettingsPage from "./pages/Settings"
+import CreateRestaurant from "./pages/CreateRestaurant"
 import Login from "./pages/Login"
 import Signup from "./pages/Signup"
 import Profile from "./pages/Profile"
@@ -23,18 +25,30 @@ function ProtectedLayout() {
   const { state, dispatch } = useStore()
   const navigate = useNavigate()
   const { t } = useI18n()
+  const { activeRestaurant } = useSettings()
   const [dataLoading, setDataLoading] = useState(true)
 
-  useEffect(() => {
+  const loadData = useCallback(async (restaurantId: string) => {
     setDataLoading(true)
-    Promise.all([loadClients(), loadProducts()])
-      .then(([clients, products]) => {
-        dispatch({ type: "LOAD_CLIENTS", payload: clients })
-        dispatch({ type: "LOAD_PRODUCTS", payload: products })
-      })
-      .catch(console.error)
-      .finally(() => setDataLoading(false))
+    try {
+      const [clients, products] = await Promise.all([
+        loadClients(restaurantId),
+        loadProducts(restaurantId),
+      ])
+      dispatch({ type: "LOAD_CLIENTS", payload: clients })
+      dispatch({ type: "LOAD_PRODUCTS", payload: products })
+    } catch (err) {
+      console.error(err)
+      dispatch({ type: "LOAD_CLIENTS", payload: [] })
+      dispatch({ type: "LOAD_PRODUCTS", payload: [] })
+    } finally {
+      setDataLoading(false)
+    }
   }, [dispatch])
+
+  useEffect(() => {
+    loadData(activeRestaurant.id)
+  }, [activeRestaurant.id, loadData])
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -95,6 +109,7 @@ function ProtectedLayout() {
             <Route path="/products" element={<ManageProducts />} />
             <Route path="/calendar" element={<CalendarPage />} />
             <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/create-restaurant" element={<CreateRestaurant />} />
           </Routes>
         </main>
       </div>

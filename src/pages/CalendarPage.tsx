@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { useI18n } from "../lib/i18n"
+import { useSettings } from "../lib/settings"
 import { generateId } from "../lib/utils"
 import {
   loadCalendarEvents,
@@ -43,6 +44,7 @@ function formatDateKey(year: number, month: number, day: number) {
 
 export default function CalendarPage() {
   const { t } = useI18n()
+  const { activeRestaurant } = useSettings()
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [loading, setLoading] = useState(true)
   const [year, setYear] = useState(new Date().getFullYear())
@@ -57,11 +59,11 @@ const [formRemindDays, setFormRemindDays] = useState(0)
 
   useEffect(() => {
     setLoading(true)
-    loadCalendarEvents()
+    loadCalendarEvents(activeRestaurant.id)
       .then(setEvents)
       .catch(console.error)
       .finally(() => setLoading(false))
-  }, [])
+  }, [activeRestaurant.id])
 
   const eventsByDate: Record<string, CalendarEvent[]> = {}
   for (const e of events) {
@@ -122,7 +124,7 @@ const [formRemindDays, setFormRemindDays] = useState(0)
         title: formTitle.trim(),
         note: formNote.trim(),
         remindDays: formRemindDays,
-      })
+      }, activeRestaurant.id)
       setEvents((prev) => [
         ...prev,
         { id, date: selectedDate, title: formTitle.trim(), note: formNote.trim(), remindDays: formRemindDays, createdAt: new Date().toISOString() },

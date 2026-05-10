@@ -6,6 +6,8 @@ export interface Product {
   name: string
   price: number
   imageUrl: string
+  category: string
+  sortOrder: number
   createdAt: string
 }
 

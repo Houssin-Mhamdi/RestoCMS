@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react"
 import { useStore } from "../lib/store"
 import { useI18n } from "../lib/i18n"
+import { useSettings } from "../lib/settings"
 import { Input } from "./ui/input"
 import { Button } from "./ui/button"
 import { Badge } from "./ui/badge"
@@ -46,6 +47,7 @@ export default function ProductCatalog({
 }: ProductCatalogProps) {
   const { state } = useStore()
   const { t } = useI18n()
+  const { activeRestaurant } = useSettings()
   const [query, setQuery] = useState("")
   const [custom, setCustom] = useState("")
 
@@ -122,7 +124,7 @@ export default function ProductCatalog({
             <span>{product.name}</span>
             {product.price != null && (
               <span className="text-primary font-semibold">
-                {product.price.toLocaleString()} DA
+                {product.price.toLocaleString()} {activeRestaurant.currency}
               </span>
             )}
           </Button>

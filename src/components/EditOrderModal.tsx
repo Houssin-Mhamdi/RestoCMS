@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react"
 import type { Order, OrderItem } from "../lib/store"
 import { useI18n } from "../lib/i18n"
+import { useSettings } from "../lib/settings"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./ui/card"
@@ -10,6 +11,7 @@ import { X, Plus, Trash2, ShoppingCart } from "lucide-react"
 interface EditOrderModalProps {
   open: boolean
   order: Order | null
+  cloneItems?: OrderItem[] | null
   productNames: string[]
   onSave: (items: OrderItem[]) => Promise<void>
   onClose: () => void
@@ -23,21 +25,27 @@ function createEditItem(name = "", price = 0): OrderItem {
 export default function EditOrderModal({
   open,
   order,
+  cloneItems,
   productNames,
   onSave,
   onClose,
 }: EditOrderModalProps) {
   const { t } = useI18n()
+  const { activeRestaurant } = useSettings()
   const [items, setItems] = useState<OrderItem[]>([])
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     if (order) {
       setItems(order.items.map((i) => ({ ...i })))
+    } else if (cloneItems) {
+      setItems(cloneItems.map((i) => ({ ...i })))
     }
-  }, [order])
+  }, [order, cloneItems])
 
-  if (!open || !order) return null
+  if (!open || (!order && !cloneItems)) return null
+
+  const isClone = !order && !!cloneItems
 
   const addItem = () => setItems((prev) => [...prev, createEditItem()])
   const removeItem = (id: string) => setItems((prev) => prev.filter((i) => i.id !== id))
@@ -68,7 +76,7 @@ export default function EditOrderModal({
           <div className="flex items-center gap-2">
             <ShoppingCart className="h-5 w-5 text-primary" />
             <CardTitle className="text-lg text-stone-800">
-              {t("editOrder")}
+              {isClone ? "Clone" : t("editOrder")}
             </CardTitle>
           </div>
           <Button variant="ghost" size="icon" onClick={onClose}>
@@ -127,13 +135,13 @@ export default function EditOrderModal({
           </Button>
           <div className="flex justify-between items-center pt-2">
             <span className="text-sm text-stone-600">{t("total")}</span>
-            <span className="text-lg font-bold text-primary">{total.toLocaleString()} DA</span>
+            <span className="text-lg font-bold text-primary">{total.toLocaleString()} {activeRestaurant.currency}</span>
           </div>
         </CardContent>
         <CardFooter className="flex justify-end gap-2">
           <Button variant="outline" onClick={onClose}>{t("cancel")}</Button>
           <Button onClick={handleSave} disabled={saving || items.filter((i) => i.name.trim()).length === 0}>
-            {saving ? "..." : t("save")}
+            {saving ? "..." : isClone ? t("create") : t("save")}
           </Button>
         </CardFooter>
       </Card>

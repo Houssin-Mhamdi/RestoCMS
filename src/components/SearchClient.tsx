@@ -21,6 +21,7 @@ import {
   ChevronRight,
   Pencil,
   Trash2,
+  CalendarRange,
 } from "lucide-react"
 
 const CLIENTS_PER_PAGE = 6
@@ -34,16 +35,32 @@ export default function SearchClient({ onSelectClient }: SearchClientProps) {
   const { t, lang } = useI18n()
   const [search, setSearch] = useState("")
   const [page, setPage] = useState(1)
+  const [dateFrom, setDateFrom] = useState("")
+  const [dateTo, setDateTo] = useState("")
 
   const [editClient, setEditClient] = useState<Client | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Client | null>(null)
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return state.clients
-    return fuzzySort(state.clients, search, (c) =>
+    let clients = state.clients
+    if (dateFrom) {
+      const from = new Date(dateFrom)
+      clients = clients.filter((c) =>
+        c.orders.some((o) => new Date(o.date) >= from)
+      )
+    }
+    if (dateTo) {
+      const to = new Date(dateTo)
+      to.setHours(23, 59, 59, 999)
+      clients = clients.filter((c) =>
+        c.orders.some((o) => new Date(o.date) <= to)
+      )
+    }
+    if (!search.trim()) return clients
+    return fuzzySort(clients, search, (c) =>
       `${c.phone} ${c.name} ${c.lastname} ${c.location}`
     )
-  }, [state.clients, search])
+  }, [state.clients, search, dateFrom, dateTo])
 
   const totalPages = Math.max(
     1,
@@ -57,6 +74,13 @@ export default function SearchClient({ onSelectClient }: SearchClientProps) {
 
   const handleSearch = (value: string) => {
     setSearch(value)
+    setPage(1)
+  }
+
+  const handleReset = () => {
+    setSearch("")
+    setDateFrom("")
+    setDateTo("")
     setPage(1)
   }
 
@@ -87,7 +111,7 @@ export default function SearchClient({ onSelectClient }: SearchClientProps) {
         </p>
       </div>
 
-      <div className="relative mb-6">
+      <div className="relative mb-4">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
         <Input
           placeholder={t("searchPlaceholder")}
@@ -95,6 +119,18 @@ export default function SearchClient({ onSelectClient }: SearchClientProps) {
           onChange={(e) => handleSearch(e.target.value)}
           className="pl-10"
         />
+      </div>
+
+      <div className="flex items-center gap-2 mb-4 flex-wrap">
+        <CalendarRange className="h-4 w-4 text-muted" />
+        <Input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setPage(1) }} className="h-8 w-40 text-xs" placeholder={t("from")} />
+        <span className="text-xs text-muted">—</span>
+        <Input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setPage(1) }} className="h-8 w-40 text-xs" placeholder={t("to")} />
+        {(dateFrom || dateTo || search) && (
+          <Button variant="ghost" size="sm" onClick={handleReset} className="h-8 text-xs">
+            {t("reset")}
+          </Button>
+        )}
       </div>
 
       <div className="space-y-2">

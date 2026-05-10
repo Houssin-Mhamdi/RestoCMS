@@ -1,4 +1,5 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react"
+import { createContext, useContext, useEffect, type ReactNode } from "react"
+import { useSettings } from "./settings"
 
 type Theme = "light" | "dark"
 
@@ -10,18 +11,16 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | null>(null)
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<Theme>(() => {
-    const stored = localStorage.getItem("theme")
-    if (stored === "dark" || stored === "light") return stored
-    return "light"
-  })
+  const { activeRestaurant, updateRestaurant } = useSettings()
+  const theme: Theme = activeRestaurant.darkMode ? "dark" : "light"
 
   useEffect(() => {
-    localStorage.setItem("theme", theme)
     document.documentElement.classList.toggle("dark", theme === "dark")
   }, [theme])
 
-  const toggle = () => setTheme((t) => (t === "light" ? "dark" : "light"))
+  const toggle = () => {
+    updateRestaurant(activeRestaurant.id, { darkMode: !activeRestaurant.darkMode })
+  }
 
   return (
     <ThemeContext.Provider value={{ theme, toggle }}>

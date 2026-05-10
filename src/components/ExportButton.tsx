@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { useI18n, LOCALE_MAP } from "../lib/i18n"
+import { useSettings } from "../lib/settings"
 import { Button } from "./ui/button"
 import { Download, FileText, FileSpreadsheet } from "lucide-react"
 import jsPDF from "jspdf"
@@ -15,6 +16,7 @@ export default function ExportButton({
   filename = "rapport",
 }: ExportButtonProps) {
   const { t, lang } = useI18n()
+  const { activeRestaurant } = useSettings()
   const [open, setOpen] = useState(false)
 
   const exportPdf = () => {
@@ -26,7 +28,7 @@ export default function ExportButton({
         r.clientName,
         new Date(r.date).toLocaleDateString(LOCALE_MAP[lang]),
         r.items,
-        `${r.total.toLocaleString()} DA`,
+        `${r.total.toLocaleString()} ${activeRestaurant.currency}`,
       ]),
       startY: 25,
     })

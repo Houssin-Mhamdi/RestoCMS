@@ -13,6 +13,7 @@ import { Badge } from "./ui/badge"
 import { Separator } from "./ui/separator"
 import { ScrollArea } from "./ui/scroll-area"
 import AutocompleteInput from "./AutocompleteInput"
+import { useSettings } from "../lib/settings"
 import EditOrderModal from "./EditOrderModal"
 import ConfirmDialog from "./ConfirmDialog"
 import {
@@ -49,6 +50,7 @@ interface ClientDetailsProps {
 export default function ClientDetails({ client, onClose }: ClientDetailsProps) {
   const { state, dispatch } = useStore()
   const { t, lang } = useI18n()
+  const { activeRestaurant } = useSettings()
   const [showAddOrder, setShowAddOrder] = useState(false)
   const [items, setItems] = useState<OrderItemInput[]>([])
   const [saving, setSaving] = useState(false)
@@ -109,7 +111,7 @@ export default function ClientDetails({ client, onClose }: ClientDetailsProps) {
 
     setSaving(true)
     try {
-      await createOrderOnSupabase(order)
+      await createOrderOnSupabase(order, activeRestaurant.id)
       dispatch({
         type: "ADD_ORDER",
         payload: { clientId: client.id, items: order.items },
@@ -126,11 +128,26 @@ export default function ClientDetails({ client, onClose }: ClientDetailsProps) {
   const handleEditOrderSave = async (updatedItems: OrderItemType[]) => {
     if (!editOrderId) return
     const total = updatedItems.reduce((s, i) => s + i.price * i.quantity, 0)
-    await updateOrderOnSupabase({ id: editOrderId, items: updatedItems, total })
-    dispatch({
-      type: "UPDATE_ORDER",
-      payload: { clientId: client.id, orderId: editOrderId, items: updatedItems, total },
-    })
+    if (editOrderId === "__clone__") {
+      const orderId = generateId()
+      await createOrderOnSupabase({
+        id: orderId,
+        clientId: client.id,
+        items: updatedItems,
+        total,
+        date: new Date().toISOString(),
+      }, activeRestaurant.id)
+      dispatch({
+        type: "ADD_ORDER",
+        payload: { clientId: client.id, items: updatedItems },
+      })
+    } else {
+      await updateOrderOnSupabase({ id: editOrderId, items: updatedItems, total })
+      dispatch({
+        type: "UPDATE_ORDER",
+        payload: { clientId: client.id, orderId: editOrderId, items: updatedItems, total },
+      })
+    }
     setEditOrderId(null)
   }
 
@@ -148,7 +165,7 @@ export default function ClientDetails({ client, onClose }: ClientDetailsProps) {
 
     setSaving(true)
     try {
-      await createOrderOnSupabase(order)
+      await createOrderOnSupabase(order, activeRestaurant.id)
       dispatch({
         type: "ADD_ORDER",
         payload: { clientId: client.id, items: order.items },
@@ -315,7 +332,7 @@ export default function ClientDetails({ client, onClose }: ClientDetailsProps) {
                     <div className="flex items-center justify-between pt-1">
                       <span className="text-xs text-stone-600">{t("total")}</span>
                       <span className="text-sm font-bold text-primary">
-                        {newOrderTotal.toLocaleString()} DA
+                        {newOrderTotal.toLocaleString()} {activeRestaurant.currency}
                       </span>
                     </div>
                   )}
@@ -361,7 +378,7 @@ export default function ClientDetails({ client, onClose }: ClientDetailsProps) {
                           </span>
                           <div className="flex items-center gap-1">
                             <Badge variant="success">
-                              {order.total.toLocaleString()} DA
+                              {order.total.toLocaleString()} {activeRestaurant.currency}
                             </Badge>
                           </div>
                         </div>
@@ -379,7 +396,7 @@ export default function ClientDetails({ client, onClose }: ClientDetailsProps) {
                               </span>
                               <span>
                                 {(item.price * item.quantity).toLocaleString()}{" "}
-                                DA
+                                {activeRestaurant.currency}
                               </span>
                             </li>
                           ))}
@@ -400,9 +417,12 @@ export default function ClientDetails({ client, onClose }: ClientDetailsProps) {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleCloneOrder(order.items)}
+                            onClick={() => {
+                              const clonedItems = order.items.map((i) => ({ ...i, id: generateId() }))
+                              setEditOrder(clonedItems)
+                              setEditOrderId("__clone__")
+                            }}
                             className="flex-1 h-7 text-xs text-accent"
-                            disabled={saving}
                           >
                             <Copy className="h-3 w-3" />
                             {t("newOrder")}
@@ -428,7 +448,8 @@ export default function ClientDetails({ client, onClose }: ClientDetailsProps) {
 
       <EditOrderModal
         open={!!editOrderId}
-        order={editOrderId ? client.orders.find((o) => o.id === editOrderId) || null : null}
+        order={editOrderId && editOrderId !== "__clone__" ? client.orders.find((o) => o.id === editOrderId) || null : null}
+        cloneItems={editOrderId === "__clone__" ? editOrder : null}
         productNames={productNames}
         onSave={handleEditOrderSave}
         onClose={() => { setEditOrderId(null); setEditOrder(null) }}
