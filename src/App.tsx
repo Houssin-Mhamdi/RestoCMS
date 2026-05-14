@@ -4,7 +4,7 @@ import { useAuth } from "./lib/auth"
 import { useI18n } from "./lib/i18n"
 import { useSettings } from "./lib/settings"
 import { useStore, type Client } from "./lib/store"
-import { loadClients, loadProducts } from "./lib/supabase-service"
+import { loadClients, loadProducts, loadCategories, loadTables, loadReservations } from "./lib/supabase-service"
 import Sidebar from "./components/Sidebar"
 import TopNav from "./components/TopNav"
 import Dashboard from "./components/Dashboard"
@@ -12,8 +12,12 @@ import CreateClient from "./components/CreateClient"
 import SearchClient from "./components/SearchClient"
 import ClientDetails from "./components/ClientDetails"
 import ManageProducts from "./pages/ManageProducts"
+import CategoriesPage from "./pages/CategoriesPage"
+import TablesPage from "./pages/TablesPage"
 import CalendarPage from "./pages/CalendarPage"
 import SettingsPage from "./pages/Settings"
+import StorePage from "./pages/StorePage"
+import ReservationsPage from "./pages/ReservationsPage"
 import CreateRestaurant from "./pages/CreateRestaurant"
 import Login from "./pages/Login"
 import Signup from "./pages/Signup"
@@ -31,16 +35,25 @@ function ProtectedLayout() {
   const loadData = useCallback(async (restaurantId: string) => {
     setDataLoading(true)
     try {
-      const [clients, products] = await Promise.all([
+      const [clients, products, categories, tables, reservations] = await Promise.all([
         loadClients(restaurantId),
         loadProducts(restaurantId),
+        loadCategories(restaurantId),
+        loadTables(restaurantId),
+        loadReservations(restaurantId),
       ])
       dispatch({ type: "LOAD_CLIENTS", payload: clients })
       dispatch({ type: "LOAD_PRODUCTS", payload: products })
+      dispatch({ type: "LOAD_CATEGORIES", payload: categories })
+      dispatch({ type: "LOAD_TABLES", payload: tables })
+      dispatch({ type: "LOAD_RESERVATIONS", payload: reservations })
     } catch (err) {
       console.error(err)
       dispatch({ type: "LOAD_CLIENTS", payload: [] })
       dispatch({ type: "LOAD_PRODUCTS", payload: [] })
+      dispatch({ type: "LOAD_CATEGORIES", payload: [] })
+      dispatch({ type: "LOAD_TABLES", payload: [] })
+      dispatch({ type: "LOAD_RESERVATIONS", payload: [] })
     } finally {
       setDataLoading(false)
     }
@@ -107,6 +120,10 @@ function ProtectedLayout() {
               element={<SearchClient onSelectClient={handleSelectClient} />}
             />
             <Route path="/products" element={<ManageProducts />} />
+            <Route path="/tables" element={<TablesPage />} />
+            <Route path="/categories" element={<CategoriesPage />} />
+            <Route path="/store" element={<StorePage />} />
+            <Route path="/reservations" element={<ReservationsPage />} />
             <Route path="/calendar" element={<CalendarPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/create-restaurant" element={<CreateRestaurant />} />

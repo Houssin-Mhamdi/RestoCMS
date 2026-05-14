@@ -13,9 +13,7 @@ import { Button } from "../components/ui/button"
 import { Input } from "../components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "../components/ui/card"
 import ConfirmDialog from "../components/ConfirmDialog"
-import { Package, Plus, Trash2, ImageIcon, Pencil, X, ChevronDown, ChevronUp, Camera, Loader2 } from "lucide-react"
-
-const DEFAULT_CATEGORIES = ["Entrées", "Plats", "Desserts", "Boissons"]
+import { Package, Plus, Trash2, ImageIcon, Pencil, X, ChevronDown, ChevronUp, ChevronRight, Camera, Loader2 } from "lucide-react"
 
 export default function ManageProducts() {
   const { state, dispatch } = useStore()
@@ -73,7 +71,7 @@ export default function ManageProducts() {
     }
   }
 
-  const categories = [...new Set([...DEFAULT_CATEGORIES, ...state.products.map((p) => p.category).filter(Boolean)])].sort()
+  const categories = state.categories.map((c) => c.name).sort()
 
   const productsByCategory = new Map<string, Product[]>()
   const uncategorized: Product[] = []

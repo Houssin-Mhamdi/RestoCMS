@@ -1,5 +1,5 @@
 import { supabase } from "./supabase"
-import type { OrderItem, Client, Product } from "./store"
+import type { OrderItem, Client, Product, RestaurantTable, TableStatus, Reservation } from "./store"
 
 export interface DbClient {
   id: string
@@ -253,6 +253,110 @@ export async function deleteProductOnSupabase(productId: string) {
   if (error) throw error
 }
 
+/* ───── Category CRUD ───── */
+
+export async function loadCategories(restaurantId: string): Promise<{ id: string; name: string }[]> {
+  const { data, error } = await supabase
+    .from("categories")
+    .select("*")
+    .eq("restaurant_id", restaurantId)
+    .order("name", { ascending: true })
+
+  if (error) throw error
+
+  return (data || []).map((c: any) => ({
+    id: c.id,
+    name: c.name,
+  }))
+}
+
+export async function createCategoryOnSupabase(name: string, restaurantId: string): Promise<string> {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error("Not authenticated")
+
+  const { data, error } = await supabase
+    .from("categories")
+    .insert({ name, user_id: user.id, restaurant_id: restaurantId })
+    .select("id")
+    .single()
+
+  if (error) throw error
+  return data.id
+}
+
+export async function deleteCategoryOnSupabase(categoryId: string) {
+  const { error } = await supabase
+    .from("categories")
+    .delete()
+    .eq("id", categoryId)
+  if (error) throw error
+}
+
+/* ───── Table CRUD ───── */
+
+export async function loadTables(restaurantId: string): Promise<RestaurantTable[]> {
+  const { data, error } = await supabase
+    .from("restaurant_tables")
+    .select("*")
+    .eq("restaurant_id", restaurantId)
+    .order("number", { ascending: true })
+
+  if (error) throw error
+
+  return (data || []).map((t: any) => ({
+    id: t.id,
+    number: t.number,
+    capacity: t.capacity,
+    status: t.status as TableStatus,
+    customerName: t.customer_name || "",
+  }))
+}
+
+export async function createTableOnSupabase(
+  table: { number: number; capacity: number; status: TableStatus; customerName?: string },
+  restaurantId: string
+): Promise<string> {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error("Not authenticated")
+
+  const { data, error } = await supabase
+    .from("restaurant_tables")
+    .insert({
+      number: table.number,
+      capacity: table.capacity,
+      status: table.status,
+      customer_name: table.customerName || "",
+      user_id: user.id,
+      restaurant_id: restaurantId,
+    })
+    .select("id")
+    .single()
+
+  if (error) throw error
+  return data.id
+}
+
+export async function updateTableOnSupabase(table: RestaurantTable) {
+  const { error } = await supabase
+    .from("restaurant_tables")
+    .update({
+      number: table.number,
+      capacity: table.capacity,
+      status: table.status,
+      customer_name: table.customerName,
+    })
+    .eq("id", table.id)
+  if (error) throw error
+}
+
+export async function deleteTableOnSupabase(tableId: string) {
+  const { error } = await supabase
+    .from("restaurant_tables")
+    .delete()
+    .eq("id", tableId)
+  if (error) throw error
+}
+
 /* ───── Calendar Events CRUD ───── */
 
 export interface CalendarEvent {
@@ -331,6 +435,43 @@ export async function updateCalendarEventOnSupabase(event: {
       remind_days: event.remindDays,
     })
     .eq("id", event.id)
+  if (error) throw error
+}
+
+/* ───── Reservation CRUD ───── */
+
+export async function loadReservations(restaurantId: string): Promise<Reservation[]> {
+  const { data, error } = await supabase
+    .from("reservations")
+    .select("*")
+    .eq("restaurant_id", restaurantId)
+    .order("created_at", { ascending: false })
+
+  if (error) throw error
+
+    return (data || []).map((r: any) => ({
+    id: r.id,
+    tableId: r.table_id || "",
+    tableNumber: r.table_number || 0,
+    guestName: r.guest_name || "",
+    email: r.email || "",
+    phone: r.phone || "",
+    date: r.date,
+    time: r.time || "",
+    guests: r.guests || 1,
+    restaurantName: r.restaurant_name || "",
+    status: r.status || "pending",
+    createdAt: r.created_at,
+  }))
+}
+
+export async function updateReservationOnSupabase(reservation: Reservation) {
+  const { error } = await supabase
+    .from("reservations")
+    .update({
+      status: reservation.status,
+    })
+    .eq("id", reservation.id)
   if (error) throw error
 }
 

@@ -1,6 +1,36 @@
 import { createContext, useContext, useReducer, type ReactNode } from "react"
 import { generateId } from "./utils"
 
+export interface Category {
+  id: string
+  name: string
+}
+
+export type TableStatus = "free" | "occupied" | "reserved"
+
+export interface RestaurantTable {
+  id: string
+  number: number
+  capacity: number
+  status: TableStatus
+  customerName: string
+}
+
+export interface Reservation {
+  id: string
+  tableId: string
+  tableNumber: number
+  guestName: string
+  email: string
+  phone: string
+  date: string
+  time: string
+  guests: number
+  restaurantName: string
+  status: "pending" | "accepted" | "rejected"
+  createdAt: string
+}
+
 export interface Product {
   id: string
   name: string
@@ -38,6 +68,9 @@ export interface Client {
 export interface AppState {
   clients: Client[]
   products: Product[]
+  categories: Category[]
+  tables: RestaurantTable[]
+  reservations: Reservation[]
   sidebarOpen: boolean
   rightSidebarOpen: boolean
   selectedClientId: string | null
@@ -61,10 +94,22 @@ type Action =
   | { type: "ADD_PRODUCT"; payload: Product }
   | { type: "UPDATE_PRODUCT"; payload: Product }
   | { type: "DELETE_PRODUCT"; payload: string }
+  | { type: "LOAD_CATEGORIES"; payload: Category[] }
+  | { type: "ADD_CATEGORY"; payload: Category }
+  | { type: "DELETE_CATEGORY"; payload: string }
+  | { type: "LOAD_TABLES"; payload: RestaurantTable[] }
+  | { type: "ADD_TABLE"; payload: RestaurantTable }
+  | { type: "UPDATE_TABLE"; payload: RestaurantTable }
+  | { type: "DELETE_TABLE"; payload: string }
+  | { type: "LOAD_RESERVATIONS"; payload: Reservation[] }
+  | { type: "UPDATE_RESERVATION"; payload: Reservation }
 
 const initialState: AppState = {
   clients: [],
   products: [],
+  categories: [],
+  tables: [],
+  reservations: [],
   sidebarOpen: true,
   rightSidebarOpen: false,
   selectedClientId: null,
@@ -172,6 +217,40 @@ function reducer(state: AppState, action: Action): AppState {
         ...state,
         products: state.products.map((p) =>
           p.id === action.payload.id ? action.payload : p
+        ),
+      }
+    case "LOAD_CATEGORIES":
+      return { ...state, categories: action.payload }
+    case "ADD_CATEGORY":
+      return { ...state, categories: [...state.categories, action.payload] }
+    case "DELETE_CATEGORY":
+      return {
+        ...state,
+        categories: state.categories.filter((c) => c.id !== action.payload),
+      }
+    case "LOAD_TABLES":
+      return { ...state, tables: action.payload }
+    case "ADD_TABLE":
+      return { ...state, tables: [...state.tables, action.payload] }
+    case "UPDATE_TABLE":
+      return {
+        ...state,
+        tables: state.tables.map((t) =>
+          t.id === action.payload.id ? action.payload : t
+        ),
+      }
+    case "DELETE_TABLE":
+      return {
+        ...state,
+        tables: state.tables.filter((t) => t.id !== action.payload),
+      }
+    case "LOAD_RESERVATIONS":
+      return { ...state, reservations: action.payload }
+    case "UPDATE_RESERVATION":
+      return {
+        ...state,
+        reservations: state.reservations.map((r) =>
+          r.id === action.payload.id ? action.payload : r
         ),
       }
     default:

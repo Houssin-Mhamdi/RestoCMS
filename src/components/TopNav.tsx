@@ -42,6 +42,7 @@ export default function TopNav() {
   const [restaurantOpen, setRestaurantOpen] = useState(false)
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const searchRef = useRef<HTMLDivElement>(null)
+  const mobileSearchRef = useRef<HTMLDivElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const profileRef = useRef<HTMLDivElement>(null)
   const langRef = useRef<HTMLDivElement>(null)
@@ -58,8 +59,13 @@ export default function TopNav() {
       ) {
         setProfileOpen(false)
         setLangOpen(false)
-        setSearchOpen(false)
         setRestaurantOpen(false)
+      }
+      if (
+        searchRef.current && !searchRef.current.contains(target) &&
+        mobileSearchRef.current && !mobileSearchRef.current.contains(target)
+      ) {
+        setSearchOpen(false)
       }
     }
     document.addEventListener("mousedown", handleClick)
@@ -125,9 +131,9 @@ export default function TopNav() {
   }, [searchQuery, state.clients, state.products, activeRestaurant.currency])
 
   function handleSearchSelect(to: string) {
+    navigate(to)
     setSearchOpen(false)
     setSearchQuery("")
-    navigate(to)
   }
 
   return (
@@ -149,7 +155,7 @@ export default function TopNav() {
         <div className="relative shrink-0" ref={restaurantRef}>
           <button
             onClick={() => setRestaurantOpen(!restaurantOpen)}
-            className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-surface-alt transition-colors text-sm font-semibold text-text max-w-[140px] lg:max-w-[200px]"
+            className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-surface-alt transition-colors text-sm font-semibold text-text max-w-[100px] sm:max-w-[140px] lg:max-w-[200px]"
           >
             {activeRestaurant.logo ? (
               <img src={activeRestaurant.logo} alt="" className="h-5 w-5 rounded object-contain shrink-0" />
@@ -238,6 +244,52 @@ export default function TopNav() {
             </div>
           )}
         </div>
+
+        {searchOpen && (
+          <div className="fixed inset-0 z-50 sm:hidden" ref={mobileSearchRef}>
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => { setSearchOpen(false); setSearchQuery("") }} />
+            <div className="relative mx-4 mt-14 rounded-lg border border-border bg-card shadow-xl">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => { setSearchQuery(e.target.value) }}
+                  placeholder={t("searchAll")}
+                  className="h-11 w-full rounded-lg border-0 bg-transparent pl-10 pr-10 text-sm text-text placeholder:text-muted focus:outline-none"
+                />
+                <button onClick={() => { setSearchOpen(false); setSearchQuery("") }} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-text">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              {searchQuery.trim() && (
+                <div className="border-t border-border max-h-60 overflow-y-auto py-1">
+                  {searchResults.length === 0 ? (
+                    <p className="px-4 py-3 text-xs text-muted">{t("noResults")}</p>
+                  ) : (
+                    searchResults.map((r, i) => {
+                      const Icon = r.icon
+                      return (
+                        <button
+                          key={i}
+                          onClick={() => handleSearchSelect(r.to)}
+                          className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-text hover:bg-surface-alt transition-colors text-left"
+                        >
+                          <Icon className="h-4 w-4 text-muted shrink-0" />
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate">{r.label}</p>
+                            <p className="truncate text-xs text-muted">{r.sublabel}</p>
+                          </div>
+                        </button>
+                      )
+                    })
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex items-center gap-1 shrink-0">
@@ -259,7 +311,7 @@ export default function TopNav() {
         <Button variant="ghost" size="icon" onClick={() => navigate("/calendar")} className="text-muted hover:text-stone-700">
           <CalendarDays className="h-5 w-5" />
         </Button>
-        <Button variant="ghost" size="icon" className="text-muted hover:text-stone-700">
+        <Button variant="ghost" size="icon" className="text-muted hover:text-stone-700 hidden sm:inline-flex">
           <Bell className="h-5 w-5" />
         </Button>
 
@@ -271,7 +323,7 @@ export default function TopNav() {
             className="text-xs text-muted hover:text-stone-700 gap-1"
           >
             <Globe className="h-4 w-4" />
-            {lang.toUpperCase()}
+            <span className="hidden sm:inline">{lang.toUpperCase()}</span>
           </Button>
           {langOpen && (
             <div className="absolute right-0 top-full z-30 mt-1 w-20 rounded-lg border border-border bg-card shadow-lg py-1">

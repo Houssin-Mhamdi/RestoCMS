@@ -15,6 +15,10 @@ import {
   Package,
   Settings,
   CalendarDays,
+  Tag,
+  Table,
+  Store,
+  CalendarCheck,
 } from "lucide-react"
 
 const navItems = [
@@ -22,6 +26,10 @@ const navItems = [
   { to: "/create", labelKey: "newClient", icon: ClipboardList },
   { to: "/search", labelKey: "search", icon: Users },
   { to: "/products", labelKey: "products", icon: Package },
+  { to: "/tables", labelKey: "tables", icon: Table },
+  { to: "/categories", labelKey: "categories", icon: Tag },
+  { to: "/store", labelKey: "store", icon: Store },
+  { to: "/reservations", labelKey: "reservations", icon: CalendarCheck },
   { to: "/calendar", labelKey: "calendar", icon: CalendarDays },
   { to: "/settings", labelKey: "settings", icon: Settings },
 ]

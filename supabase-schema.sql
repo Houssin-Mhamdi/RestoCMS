@@ -36,10 +36,20 @@ CREATE TABLE IF NOT EXISTS products (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
+-- 2.75 CATEGORIES TABLE
+CREATE TABLE IF NOT EXISTS categories (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid() NOT NULL,
+  restaurant_id UUID NOT NULL DEFAULT '00000000-0000-0000-0000-000000000000',
+  name TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
 -- 3. ENABLE RLS
 ALTER TABLE clients ENABLE ROW LEVEL SECURITY;
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
+ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
 
 -- Drop existing policies before recreating
 DROP POLICY IF EXISTS "Users can view own clients" ON clients;
@@ -91,6 +101,41 @@ CREATE POLICY "Users can update own products"
 
 CREATE POLICY "Users can delete own products"
   ON products FOR DELETE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can view own categories"
+  ON categories FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own categories"
+  ON categories FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own categories"
+  ON categories FOR DELETE USING (auth.uid() = user_id);
+
+-- 5.75 TABLES TABLE
+CREATE TABLE IF NOT EXISTS restaurant_tables (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid() NOT NULL,
+  restaurant_id UUID NOT NULL DEFAULT '00000000-0000-0000-0000-000000000000',
+  number INTEGER NOT NULL,
+  capacity INTEGER DEFAULT 4,
+  status TEXT DEFAULT 'free',
+  customer_name TEXT DEFAULT '',
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE restaurant_tables ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own tables"
+  ON restaurant_tables FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own tables"
+  ON restaurant_tables FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own tables"
+  ON restaurant_tables FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own tables"
+  ON restaurant_tables FOR DELETE USING (auth.uid() = user_id);
 
 -- 6. CALENDAR EVENTS TABLE
 CREATE TABLE IF NOT EXISTS calendar_events (
@@ -233,3 +278,35 @@ CREATE POLICY "Users can delete own logos"
     bucket_id = 'logos'
     AND auth.role() = 'authenticated'
   );
+
+/* ───── Reservations ───── */
+
+CREATE TABLE IF NOT EXISTS reservations (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid() NOT NULL,
+  restaurant_id UUID NOT NULL DEFAULT '00000000-0000-0000-0000-000000000000',
+  table_id UUID REFERENCES restaurant_tables(id) ON DELETE SET NULL,
+  table_number INTEGER DEFAULT 0,
+  guest_name TEXT DEFAULT '',
+  email TEXT DEFAULT '',
+  phone TEXT DEFAULT '',
+  date DATE NOT NULL,
+  time TEXT DEFAULT '',
+  guests INTEGER DEFAULT 1,
+  status TEXT DEFAULT 'pending',
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE reservations ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own reservations"
+  ON reservations FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own reservations"
+  ON reservations FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own reservations"
+  ON reservations FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own reservations"
+  ON reservations FOR DELETE USING (auth.uid() = user_id);
