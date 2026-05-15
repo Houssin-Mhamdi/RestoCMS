@@ -48,7 +48,7 @@ export default function StorePage() {
   }
 
   const handlePreview = () => {
-    window.open("http://localhost:3001", "_blank")
+    window.open("https://restooline.netlify.app", "_blank")
   }
 
   return (
