@@ -34,7 +34,7 @@ export default function ReservationsPage() {
         dispatch({ type: "UPDATE_TABLE", payload: updatedTable })
       }
 
-      fetch("http://localhost:3000/api/send-email", {
+      fetch("https://restooline.netlify.app/api/send-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
