@@ -46,13 +46,22 @@ export default function SubscriptionPage() {
   useEffect(() => {
     const sessionId = new URLSearchParams(window.location.search).get("session_id")
     if (sessionId) {
+      setLoading(true)
+      setError("")
       fetch(`${STORE_URL}/api/confirm-subscription`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sessionId }),
       })
+        .then(async (res) => {
+          const data = await res.json()
+          if (!res.ok) throw new Error(data.error || "Confirmation failed")
+        })
         .then(() => loadData())
-        .catch(console.error)
+        .catch((err) => {
+          setError(err.message)
+          setLoading(false)
+        })
       window.history.replaceState({}, "", window.location.pathname)
     } else {
       loadData()
