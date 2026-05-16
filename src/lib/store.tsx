@@ -38,6 +38,18 @@ export interface Product {
   imageUrl: string
   category: string
   sortOrder: number
+  description: string
+  tag: string
+  isSignature: boolean
+  available: boolean
+  featured: boolean
+  prepTime: number
+  stock: number
+  unit: string
+  costPrice: number
+  minStock: number
+  allergens: string
+  dietary: string
   createdAt: string
 }
 
@@ -46,6 +58,7 @@ export interface OrderItem {
   name: string
   quantity: number
   price: number
+  productId?: string
 }
 
 export interface Order {
@@ -65,12 +78,24 @@ export interface Client {
   createdAt: string
 }
 
+export interface SeoSettings {
+  page: string
+  metaTitle: string
+  metaDescription: string
+  ogTitle: string
+  ogDescription: string
+  ogImage: string
+  keywords: string
+  h1Heading: string
+}
+
 export interface AppState {
   clients: Client[]
   products: Product[]
   categories: Category[]
   tables: RestaurantTable[]
   reservations: Reservation[]
+  seoSettings: Record<string, SeoSettings>
   sidebarOpen: boolean
   rightSidebarOpen: boolean
   selectedClientId: string | null
@@ -103,6 +128,8 @@ type Action =
   | { type: "DELETE_TABLE"; payload: string }
   | { type: "LOAD_RESERVATIONS"; payload: Reservation[] }
   | { type: "UPDATE_RESERVATION"; payload: Reservation }
+  | { type: "LOAD_SEO_SETTINGS"; payload: SeoSettings[] }
+  | { type: "UPDATE_SEO_SETTING"; payload: SeoSettings }
 
 const initialState: AppState = {
   clients: [],
@@ -110,6 +137,7 @@ const initialState: AppState = {
   categories: [],
   tables: [],
   reservations: [],
+  seoSettings: {},
   sidebarOpen: true,
   rightSidebarOpen: false,
   selectedClientId: null,
@@ -252,6 +280,21 @@ function reducer(state: AppState, action: Action): AppState {
         reservations: state.reservations.map((r) =>
           r.id === action.payload.id ? action.payload : r
         ),
+      }
+    case "LOAD_SEO_SETTINGS": {
+      const map: Record<string, SeoSettings> = {}
+      for (const s of action.payload) {
+        map[s.page] = s
+      }
+      return { ...state, seoSettings: map }
+    }
+    case "UPDATE_SEO_SETTING":
+      return {
+        ...state,
+        seoSettings: {
+          ...state.seoSettings,
+          [action.payload.page]: action.payload,
+        },
       }
     default:
       return state

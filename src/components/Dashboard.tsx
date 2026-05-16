@@ -28,6 +28,8 @@ import {
   Calendar,
   CalendarDays,
   Bell,
+  AlertTriangle,
+  Package,
 } from "lucide-react"
 
 const CHART_COLORS = ["#ea580c", "#f59e0b", "#10b981", "#3b82f6", "#8b5cf6", "#ec4899", "#6366f1", "#14b8a6"]
@@ -108,6 +110,11 @@ export default function Dashboard() {
     })
   }, [allOrders, dateFrom, dateTo])
 
+  const lowStockCount = useMemo(
+    () => state.products.filter((p) => p.stock >= 0 && p.stock <= p.minStock && p.available).length,
+    [state.products]
+  )
+
   const stats = useMemo(() => {
     const clientIds = new Set(filteredOrders.map((o) => o.clientName))
     const totalRev = filteredOrders.reduce((s, o) => s + o.total, 0)
@@ -142,8 +149,15 @@ export default function Dashboard() {
         color: "text-accent",
         bg: "bg-amber-50",
       },
+      {
+        key: "lowStock",
+        value: `${lowStockCount}`,
+        icon: AlertTriangle,
+        color: lowStockCount > 0 ? "text-red-500" : "text-green-500",
+        bg: lowStockCount > 0 ? "bg-red-50" : "bg-green-50",
+      },
     ]
-  }, [filteredOrders])
+  }, [filteredOrders, lowStockCount])
 
   const totalPages = Math.max(
     1,

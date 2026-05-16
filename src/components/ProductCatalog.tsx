@@ -7,7 +7,7 @@ import { Button } from "./ui/button"
 import { Badge } from "./ui/badge"
 import { Search, Plus, X, ImageIcon } from "lucide-react"
 
-const DEFAULT_MENU: { name: string; price: number; imageUrl?: string }[] = [
+const DEFAULT_MENU: { name: string; price: number; imageUrl?: string; productId?: string }[] = [
   { name: "Burger", price: 500 },
   { name: "Pizza", price: 800 },
   { name: "Tacos", price: 600 },
@@ -32,11 +32,12 @@ interface ProductEntry {
   name: string
   price?: number
   imageUrl?: string
+  productId?: string
 }
 
 interface ProductCatalogProps {
   selected: string[]
-  onAdd: (product: { name: string; price?: number }) => void
+  onAdd: (product: { name: string; price?: number; productId?: string }) => void
   onRemove: (name: string) => void
 }
 
@@ -56,6 +57,7 @@ export default function ProductCatalog({
       name: p.name,
       price: p.price,
       imageUrl: p.imageUrl,
+      productId: p.id,
     }))
     const existing = new Set(storeProducts.map((p) => p.name.toLowerCase()))
     const defaults = DEFAULT_MENU.filter(
@@ -109,7 +111,7 @@ export default function ProductCatalog({
             key={product.name}
             variant="outline"
             size="sm"
-            onClick={() => onAdd({ name: product.name, price: product.price })}
+            onClick={() => onAdd({ name: product.name, price: product.price, productId: product.productId })}
             className="h-9 text-xs gap-1.5"
           >
             {product.imageUrl ? (

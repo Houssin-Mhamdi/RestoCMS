@@ -310,3 +310,95 @@ CREATE POLICY "Users can update own reservations"
 
 CREATE POLICY "Users can delete own reservations"
   ON reservations FOR DELETE USING (auth.uid() = user_id);
+
+-- ============================================
+-- EXTEND PRODUCTS TABLE (unified Menu items)
+-- ============================================
+ALTER TABLE products ADD COLUMN IF NOT EXISTS description TEXT DEFAULT '';
+ALTER TABLE products ADD COLUMN IF NOT EXISTS tag TEXT DEFAULT '';
+ALTER TABLE products ADD COLUMN IF NOT EXISTS is_signature BOOLEAN DEFAULT false;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS available BOOLEAN DEFAULT true;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS featured BOOLEAN DEFAULT false;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS prep_time INTEGER DEFAULT 0;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS stock INTEGER DEFAULT -1;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS unit TEXT DEFAULT '';
+ALTER TABLE products ADD COLUMN IF NOT EXISTS cost_price NUMERIC DEFAULT 0;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS min_stock INTEGER DEFAULT 0;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS allergens TEXT DEFAULT '';
+ALTER TABLE products ADD COLUMN IF NOT EXISTS dietary TEXT DEFAULT '';
+
+-- ============================================
+-- DROP SEPARATE MENU_ITEMS TABLE (if created)
+-- ============================================
+DROP TABLE IF EXISTS menu_items;
+
+-- ============================================
+-- ADD AVAILABILITY COLUMNS TO RESTAURANTS
+-- ============================================
+ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS opening_hours JSONB DEFAULT '{}'::jsonb;
+ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS max_guests_per_slot INTEGER DEFAULT 20;
+ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS slot_interval INTEGER DEFAULT 60;
+
+-- ============================================
+-- SEO SETTINGS TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS seo_settings (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid() NOT NULL,
+  restaurant_id UUID NOT NULL DEFAULT '00000000-0000-0000-0000-000000000000',
+  page TEXT NOT NULL,
+  meta_title TEXT DEFAULT '',
+  meta_description TEXT DEFAULT '',
+  og_title TEXT DEFAULT '',
+  og_description TEXT DEFAULT '',
+  og_image TEXT DEFAULT '',
+  keywords TEXT DEFAULT '',
+  h1_heading TEXT DEFAULT '',
+  schema_json JSONB DEFAULT NULL,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(restaurant_id, page)
+);
+
+ALTER TABLE seo_settings ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own seo settings"
+  ON seo_settings FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own seo settings"
+  ON seo_settings FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own seo settings"
+  ON seo_settings FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own seo settings"
+  ON seo_settings FOR DELETE USING (auth.uid() = user_id);
+
+-- ============================================
+-- SUBSCRIPTIONS TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS subscriptions (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  plan TEXT NOT NULL DEFAULT 'free',
+  status TEXT NOT NULL DEFAULT 'trialing',
+  trial_ends_at TIMESTAMPTZ,
+  stripe_customer_id TEXT DEFAULT '',
+  stripe_subscription_id TEXT DEFAULT '',
+  current_period_start TIMESTAMPTZ,
+  current_period_end TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(user_id)
+);
+
+ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own subscription"
+  ON subscriptions FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own subscription"
+  ON subscriptions FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own subscription"
+  ON subscriptions FOR UPDATE USING (auth.uid() = user_id);

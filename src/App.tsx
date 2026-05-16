@@ -4,7 +4,7 @@ import { useAuth } from "./lib/auth"
 import { useI18n } from "./lib/i18n"
 import { useSettings } from "./lib/settings"
 import { useStore, type Client } from "./lib/store"
-import { loadClients, loadProducts, loadCategories, loadTables, loadReservations } from "./lib/supabase-service"
+import { loadClients, loadProducts, loadCategories, loadTables, loadReservations, loadSeoSettings } from "./lib/supabase-service"
 import Sidebar from "./components/Sidebar"
 import TopNav from "./components/TopNav"
 import Dashboard from "./components/Dashboard"
@@ -18,6 +18,10 @@ import CalendarPage from "./pages/CalendarPage"
 import SettingsPage from "./pages/Settings"
 import StorePage from "./pages/StorePage"
 import ReservationsPage from "./pages/ReservationsPage"
+import AvailabilityPage from "./pages/AvailabilityPage"
+import SeoPage from "./pages/SeoPage"
+import SubscriptionPage from "./pages/SubscriptionPage"
+import { SubscriptionProvider } from "./lib/subscription"
 import CreateRestaurant from "./pages/CreateRestaurant"
 import Login from "./pages/Login"
 import Signup from "./pages/Signup"
@@ -35,18 +39,20 @@ function ProtectedLayout() {
   const loadData = useCallback(async (restaurantId: string) => {
     setDataLoading(true)
     try {
-      const [clients, products, categories, tables, reservations] = await Promise.all([
+      const [clients, products, categories, tables, reservations, seoSettings] = await Promise.all([
         loadClients(restaurantId),
         loadProducts(restaurantId),
         loadCategories(restaurantId),
         loadTables(restaurantId),
         loadReservations(restaurantId),
+        loadSeoSettings(restaurantId),
       ])
       dispatch({ type: "LOAD_CLIENTS", payload: clients })
       dispatch({ type: "LOAD_PRODUCTS", payload: products })
       dispatch({ type: "LOAD_CATEGORIES", payload: categories })
       dispatch({ type: "LOAD_TABLES", payload: tables })
       dispatch({ type: "LOAD_RESERVATIONS", payload: reservations })
+      dispatch({ type: "LOAD_SEO_SETTINGS", payload: seoSettings })
     } catch (err) {
       console.error(err)
       dispatch({ type: "LOAD_CLIENTS", payload: [] })
@@ -97,6 +103,7 @@ function ProtectedLayout() {
   }
 
   return (
+    <SubscriptionProvider>
     <div className="min-h-screen bg-surface">
       {state.sidebarOpen && window.innerWidth < 1024 && (
         <div
@@ -124,6 +131,9 @@ function ProtectedLayout() {
             <Route path="/categories" element={<CategoriesPage />} />
             <Route path="/store" element={<StorePage />} />
             <Route path="/reservations" element={<ReservationsPage />} />
+            <Route path="/availability" element={<AvailabilityPage />} />
+            <Route path="/seo" element={<SeoPage />} />
+            <Route path="/subscription" element={<SubscriptionPage />} />
             <Route path="/calendar" element={<CalendarPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/create-restaurant" element={<CreateRestaurant />} />
@@ -138,6 +148,7 @@ function ProtectedLayout() {
         />
       )}
     </div>
+    </SubscriptionProvider>
   )
 }
 

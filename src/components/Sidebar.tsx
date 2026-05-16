@@ -2,6 +2,7 @@ import { NavLink } from "react-router-dom"
 import { useStore } from "../lib/store"
 import { useAuth } from "../lib/auth"
 import { useI18n } from "../lib/i18n"
+import { useSubscription } from "../lib/subscription"
 import { Button } from "./ui/button"
 import { ScrollArea } from "./ui/scroll-area"
 import { Separator } from "./ui/separator"
@@ -19,17 +20,23 @@ import {
   Table,
   Store,
   CalendarCheck,
+  Clock,
+  Search,
+  CreditCard,
 } from "lucide-react"
 
 const navItems = [
   { to: "/", labelKey: "dashboard", icon: LayoutDashboard },
   { to: "/create", labelKey: "newClient", icon: ClipboardList },
   { to: "/search", labelKey: "search", icon: Users },
-  { to: "/products", labelKey: "products", icon: Package },
+  { to: "/products", labelKey: "menu", icon: Package },
   { to: "/tables", labelKey: "tables", icon: Table },
   { to: "/categories", labelKey: "categories", icon: Tag },
+  { to: "/availability", labelKey: "availability", icon: Clock },
   { to: "/store", labelKey: "store", icon: Store },
+  { to: "/seo", labelKey: "seo", icon: Search },
   { to: "/reservations", labelKey: "reservations", icon: CalendarCheck },
+  { to: "/subscription", labelKey: "payment", icon: CreditCard },
   { to: "/calendar", labelKey: "calendar", icon: CalendarDays },
   { to: "/settings", labelKey: "settings", icon: Settings },
 ]
@@ -38,6 +45,7 @@ export default function Sidebar() {
   const { state, dispatch } = useStore()
   const { user } = useAuth()
   const { t } = useI18n()
+  const { canAccess } = useSubscription()
 
   const closeOnMobile = () => {
     if (window.innerWidth < 1024) {
@@ -83,7 +91,11 @@ export default function Sidebar() {
 
         <ScrollArea className="flex-1 py-4">
           <nav className="flex flex-col gap-1 px-2">
-            {navItems.map((item) => {
+            {navItems.filter((item) => {
+              if (item.to === "/reservations" && !canAccess("reservations")) return false
+              if (item.to === "/calendar" && !canAccess("calendar")) return false
+              return true
+            }).map((item) => {
               const Icon = item.icon
               return (
                 <NavLink

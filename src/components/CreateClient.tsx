@@ -3,7 +3,7 @@ import { useStore } from "../lib/store"
 import { generateId } from "../lib/utils"
 import { useI18n } from "../lib/i18n"
 import { useSettings } from "../lib/settings"
-import { createClientOnSupabase } from "../lib/supabase-service"
+import { createClientOnSupabase, updateProductOnSupabase } from "../lib/supabase-service"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
@@ -16,11 +16,12 @@ interface OrderItemInput {
   name: string
   quantity: number
   price: number
+  productId?: string
 }
 
 let itemIdCounter = 0
-function createItem(name = "", price = 0): OrderItemInput {
-  return { id: `item_${++itemIdCounter}`, name, quantity: 1, price }
+function createItem(name = "", price = 0, productId?: string): OrderItemInput {
+  return { id: `item_${++itemIdCounter}`, name, quantity: 1, price, productId }
 }
 
 export default function CreateClient() {
@@ -51,12 +52,24 @@ export default function CreateClient() {
     value: string | number
   ) =>
     setItems((prev) =>
-      prev.map((i) => (i.id === id ? { ...i, [field]: value } : i))
+      prev.map((i) => {
+        if (i.id !== id) return i
+        const updated = { ...i, [field]: value }
+        // Auto-fill price when name matches a product
+        if (field === "name" && typeof value === "string") {
+          const product = state.products.find((p) => p.name.toLowerCase() === value.toLowerCase())
+          if (product) {
+            updated.price = product.price
+            updated.productId = product.id
+          }
+        }
+        return updated
+      })
     )
 
   const catalogNames = items.map((i) => i.name)
-  const handleCatalogAdd = (product: { name: string; price?: number }) => {
-    setItems((prev) => [...prev, createItem(product.name, product.price ?? 0)])
+  const handleCatalogAdd = (product: { name: string; price?: number; productId?: string }) => {
+    setItems((prev) => [...prev, createItem(product.name, product.price ?? 0, product.productId)])
   }
   const handleCatalogRemove = (productName: string) => {
     setItems((prev) => prev.filter((i) => i.name !== productName))
@@ -78,6 +91,14 @@ export default function CreateClient() {
     const clientId = generateId()
     const orderId = validItems.length > 0 ? generateId() : undefined
 
+    const orderItems = validItems.map((i) => ({
+      id: i.id,
+      name: i.name,
+      quantity: i.quantity,
+      price: i.price,
+      productId: i.productId,
+    }))
+
     const newClient = {
       id: clientId,
       name: name.trim(),
@@ -89,12 +110,7 @@ export default function CreateClient() {
           ? [
               {
                 id: orderId!,
-                items: validItems.map((i) => ({
-                  id: i.id,
-                  name: i.name,
-                  quantity: i.quantity,
-                  price: i.price,
-                })),
+                items: orderItems,
                 date: new Date().toISOString(),
                 total: validItems.reduce(
                   (s, i) => s + i.price * i.quantity,
@@ -109,6 +125,18 @@ export default function CreateClient() {
     try {
       await createClientOnSupabase(newClient, activeRestaurant.id)
       dispatch({ type: "ADD_CLIENT", payload: newClient })
+
+      // Decrement stock for each product in the order
+      for (const item of orderItems) {
+        if (!item.productId) continue
+        const product = state.products.find((p) => p.id === item.productId)
+        if (!product || product.stock < 0) continue
+        const newStock = Math.max(0, product.stock - item.quantity)
+        const updated = { ...product, stock: newStock }
+        await updateProductOnSupabase(updated)
+        dispatch({ type: "UPDATE_PRODUCT", payload: updated })
+      }
+
       resetForm()
     } catch (err) {
       console.error("Failed to save client:", err)

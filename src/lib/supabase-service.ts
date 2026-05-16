@@ -194,6 +194,18 @@ export async function loadProducts(restaurantId: string): Promise<Product[]> {
     imageUrl: p.image_url || "",
     category: p.category || "",
     sortOrder: p.sort_order ?? 0,
+    description: p.description || "",
+    tag: p.tag || "",
+    isSignature: p.is_signature || false,
+    available: p.available ?? true,
+    featured: p.featured || false,
+    prepTime: p.prep_time ?? 0,
+    stock: p.stock ?? -1,
+    unit: p.unit || "",
+    costPrice: p.cost_price ?? 0,
+    minStock: p.min_stock ?? 0,
+    allergens: p.allergens || "",
+    dietary: p.dietary || "",
     createdAt: p.created_at,
   }))
 }
@@ -205,6 +217,18 @@ export async function createProductOnSupabase(product: {
   imageUrl: string
   category: string
   sortOrder: number
+  description: string
+  tag: string
+  isSignature: boolean
+  available: boolean
+  featured: boolean
+  prepTime: number
+  stock: number
+  unit: string
+  costPrice: number
+  minStock: number
+  allergens: string
+  dietary: string
 }, restaurantId: string) {
   const {
     data: { user },
@@ -220,6 +244,18 @@ export async function createProductOnSupabase(product: {
     image_url: product.imageUrl,
     category: product.category,
     sort_order: product.sortOrder,
+    description: product.description,
+    tag: product.tag,
+    is_signature: product.isSignature,
+    available: product.available,
+    featured: product.featured,
+    prep_time: product.prepTime,
+    stock: product.stock,
+    unit: product.unit,
+    cost_price: product.costPrice,
+    min_stock: product.minStock,
+    allergens: product.allergens,
+    dietary: product.dietary,
   })
   if (error) throw error
 }
@@ -231,6 +267,18 @@ export async function updateProductOnSupabase(product: {
   imageUrl: string
   category: string
   sortOrder: number
+  description: string
+  tag: string
+  isSignature: boolean
+  available: boolean
+  featured: boolean
+  prepTime: number
+  stock: number
+  unit: string
+  costPrice: number
+  minStock: number
+  allergens: string
+  dietary: string
 }) {
   const { error } = await supabase
     .from("products")
@@ -240,6 +288,18 @@ export async function updateProductOnSupabase(product: {
       image_url: product.imageUrl,
       category: product.category,
       sort_order: product.sortOrder,
+      description: product.description,
+      tag: product.tag,
+      is_signature: product.isSignature,
+      available: product.available,
+      featured: product.featured,
+      prep_time: product.prepTime,
+      stock: product.stock,
+      unit: product.unit,
+      cost_price: product.costPrice,
+      min_stock: product.minStock,
+      allergens: product.allergens,
+      dietary: product.dietary,
     })
     .eq("id", product.id)
   if (error) throw error
@@ -556,5 +616,181 @@ export async function deleteRestaurantOnSupabase(id: string) {
     .from("restaurants")
     .delete()
     .eq("id", id)
+  if (error) throw error
+}
+
+/* ───── SEO Settings CRUD ───── */
+
+export interface DbSeoSettings {
+  id: string
+  page: string
+  meta_title: string
+  meta_description: string
+  og_title: string
+  og_description: string
+  og_image: string
+  keywords: string
+  h1_heading: string
+}
+
+export interface SeoSettingsInput {
+  page: string
+  metaTitle: string
+  metaDescription: string
+  ogTitle: string
+  ogDescription: string
+  ogImage: string
+  keywords: string
+  h1Heading: string
+}
+
+export async function loadSeoSettings(restaurantId: string): Promise<SeoSettingsInput[]> {
+  const { data, error } = await supabase
+    .from("seo_settings")
+    .select("*")
+    .eq("restaurant_id", restaurantId)
+
+  if (error) throw error
+
+  return (data || []).map((s: DbSeoSettings) => ({
+    page: s.page,
+    metaTitle: s.meta_title || "",
+    metaDescription: s.meta_description || "",
+    ogTitle: s.og_title || "",
+    ogDescription: s.og_description || "",
+    ogImage: s.og_image || "",
+    keywords: s.keywords || "",
+    h1Heading: s.h1_heading || "",
+  }))
+}
+
+export async function saveSeoSetting(
+  restaurantId: string,
+  input: SeoSettingsInput
+) {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error("Not authenticated")
+
+  const { error } = await supabase.from("seo_settings").upsert(
+    {
+      user_id: user.id,
+      restaurant_id: restaurantId,
+      page: input.page,
+      meta_title: input.metaTitle,
+      meta_description: input.metaDescription,
+      og_title: input.ogTitle,
+      og_description: input.ogDescription,
+      og_image: input.ogImage,
+      keywords: input.keywords,
+      h1_heading: input.h1Heading,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "restaurant_id, page" }
+  )
+  if (error) throw error
+}
+
+/* ───── Subscription CRUD ───── */
+
+export interface Subscription {
+  id: string
+  userId: string
+  plan: string
+  status: string
+  trialEndsAt: string | null
+  stripeCustomerId: string
+  stripeSubscriptionId: string
+  currentPeriodStart: string | null
+  currentPeriodEnd: string | null
+}
+
+export async function loadSubscription(): Promise<Subscription | null> {
+  const { data, error } = await supabase
+    .from("subscriptions")
+    .select("*")
+    .single()
+
+  if (error && error.code !== "PGRST116") throw error
+  if (!data) return null
+
+  return {
+    id: data.id,
+    userId: data.user_id,
+    plan: data.plan || "free",
+    status: data.status || "trialing",
+    trialEndsAt: data.trial_ends_at || null,
+    stripeCustomerId: data.stripe_customer_id || "",
+    stripeSubscriptionId: data.stripe_subscription_id || "",
+    currentPeriodStart: data.current_period_start || null,
+    currentPeriodEnd: data.current_period_end || null,
+  }
+}
+
+export async function createFreeSubscription(userId: string) {
+  const trialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString()
+  const { error } = await supabase.from("subscriptions").upsert(
+    {
+      user_id: userId,
+      plan: "free",
+      status: "trialing",
+      trial_ends_at: trialEndsAt,
+    },
+    { onConflict: "user_id" }
+  )
+  if (error) throw error
+}
+
+export async function updateSubscriptionLocally(sub: Subscription) {
+  const { error } = await supabase
+    .from("subscriptions")
+    .update({
+      plan: sub.plan,
+      status: sub.status,
+      stripe_customer_id: sub.stripeCustomerId,
+      stripe_subscription_id: sub.stripeSubscriptionId,
+      current_period_start: sub.currentPeriodStart,
+      current_period_end: sub.currentPeriodEnd,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("user_id", sub.userId)
+  if (error) throw error
+}
+
+/* ───── Availability Settings ───── */
+
+export interface AvailabilitySettings {
+  openingHours: Record<string, { open: string; close: string } | null>
+  maxGuestsPerSlot: number
+  slotInterval: number
+}
+
+export async function loadAvailabilitySettings(restaurantId: string): Promise<AvailabilitySettings> {
+  const { data, error } = await supabase
+    .from("restaurants")
+    .select("opening_hours, max_guests_per_slot, slot_interval")
+    .eq("id", restaurantId)
+    .single()
+
+  if (error) throw error
+
+  return {
+    openingHours: data.opening_hours || {},
+    maxGuestsPerSlot: data.max_guests_per_slot ?? 20,
+    slotInterval: data.slot_interval ?? 60,
+  }
+}
+
+export async function saveAvailabilitySettings(
+  restaurantId: string,
+  settings: AvailabilitySettings
+) {
+  const { error } = await supabase
+    .from("restaurants")
+    .update({
+      opening_hours: settings.openingHours,
+      max_guests_per_slot: settings.maxGuestsPerSlot,
+      slot_interval: settings.slotInterval,
+    })
+    .eq("id", restaurantId)
   if (error) throw error
 }

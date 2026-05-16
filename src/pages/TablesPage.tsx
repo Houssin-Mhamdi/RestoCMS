@@ -214,6 +214,24 @@ export default function TablesPage() {
                 >
                   <Trash2 className="h-3 w-3" />
                 </button>
+                {table.status !== "free" && (
+                  <button
+                    onClick={async (e) => {
+                      e.stopPropagation()
+                      const updated = { ...table, status: "free" as const, customerName: "" }
+                      try {
+                        await updateTableOnSupabase(updated)
+                        dispatch({ type: "UPDATE_TABLE", payload: updated })
+                      } catch (err) {
+                        console.error(err)
+                      }
+                    }}
+                    className="absolute top-0 left-0 w-6 h-6 flex items-center justify-center bg-green-500 text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity rounded-br-lg"
+                    title={t("free")}
+                  >
+                    ✓
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -247,10 +265,10 @@ export default function TablesPage() {
               <div className="space-y-1">
                 <label className="text-xs font-medium text-muted">{t("status")}</label>
                 <div className="flex gap-2">
-                  {(["free", "occupied", "reserved"] as TableStatus[]).map((s) => (
-                    <button
-                      key={s}
-                      onClick={() => setEditStatus(s)}
+                    {(["free", "occupied", "reserved"] as TableStatus[]).map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => { setEditStatus(s); if (s === "free") setEditName("") }}
                       className={`flex-1 rounded-lg border-2 px-3 py-2 text-xs font-semibold uppercase tracking-wider transition-all ${
                         editStatus === s
                           ? STATUS_COLORS[s] + " ring-2 ring-primary"

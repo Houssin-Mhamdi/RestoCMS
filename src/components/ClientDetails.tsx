@@ -1,11 +1,12 @@
 import { useState, useMemo } from "react"
-import { useStore, type Client, type OrderItem as OrderItemType } from "../lib/store"
+import { useStore, type Client, type OrderItem as OrderItemType, type Product } from "../lib/store"
 import { generateId } from "../lib/utils"
 import { useI18n, LOCALE_MAP } from "../lib/i18n"
 import {
   createOrderOnSupabase,
   updateOrderOnSupabase,
   deleteOrderOnSupabase,
+  updateProductOnSupabase,
 } from "../lib/supabase-service"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
@@ -35,6 +36,7 @@ interface OrderItemInput {
   name: string
   quantity: number
   price: number
+  productId?: string
 }
 
 let itemIdCounter = 0
@@ -57,6 +59,20 @@ export default function ClientDetails({ client, onClose }: ClientDetailsProps) {
   const [deleteOrderId, setDeleteOrderId] = useState<string | null>(null)
   const [editOrder, setEditOrder] = useState<OrderItemType[] | null>(null)
   const [editOrderId, setEditOrderId] = useState<string | null>(null)
+
+  const findProduct = (name: string): Product | undefined =>
+    state.products.find((p) => p.name.toLowerCase() === name.toLowerCase())
+
+  const adjustStock = async (items: { name: string; quantity: number }[], multiplier: number) => {
+    for (const item of items) {
+      const product = findProduct(item.name)
+      if (!product || product.stock < 0) continue
+      const newStock = Math.max(0, product.stock + item.quantity * multiplier)
+      const updated = { ...product, stock: newStock }
+      await updateProductOnSupabase(updated)
+      dispatch({ type: "UPDATE_PRODUCT", payload: updated })
+    }
+  }
 
   const productNames = useMemo(() => {
     // count how many times this client ordered each product (favorites)
@@ -87,7 +103,18 @@ export default function ClientDetails({ client, onClose }: ClientDetailsProps) {
     value: string | number
   ) =>
     setItems((prev) =>
-      prev.map((i) => (i.id === id ? { ...i, [field]: value } : i))
+      prev.map((i) => {
+        if (i.id !== id) return i
+        const updated = { ...i, [field]: value }
+        if (field === "name" && typeof value === "string") {
+          const product = state.products.find((p) => p.name.toLowerCase() === value.toLowerCase())
+          if (product) {
+            updated.price = product.price
+            updated.productId = product.id
+          }
+        }
+        return updated
+      })
     )
 
   const handleAddOrder = async () => {
@@ -96,15 +123,17 @@ export default function ClientDetails({ client, onClose }: ClientDetailsProps) {
 
     const orderId = generateId()
     const total = validItems.reduce((s, i) => s + i.price * i.quantity, 0)
+    const orderItems = validItems.map((i) => ({
+      id: i.id,
+      name: i.name,
+      quantity: i.quantity,
+      price: i.price,
+      productId: findProduct(i.name)?.id,
+    }))
     const order = {
       id: orderId,
       clientId: client.id,
-      items: validItems.map((i) => ({
-        id: i.id,
-        name: i.name,
-        quantity: i.quantity,
-        price: i.price,
-      })),
+      items: orderItems,
       total,
       date: new Date().toISOString(),
     }
@@ -116,6 +145,7 @@ export default function ClientDetails({ client, onClose }: ClientDetailsProps) {
         type: "ADD_ORDER",
         payload: { clientId: client.id, items: order.items },
       })
+      await adjustStock(validItems, -1)
       setItems([])
       setShowAddOrder(false)
     } catch (err) {
@@ -128,6 +158,7 @@ export default function ClientDetails({ client, onClose }: ClientDetailsProps) {
   const handleEditOrderSave = async (updatedItems: OrderItemType[]) => {
     if (!editOrderId) return
     const total = updatedItems.reduce((s, i) => s + i.price * i.quantity, 0)
+
     if (editOrderId === "__clone__") {
       const orderId = generateId()
       await createOrderOnSupabase({
@@ -141,7 +172,33 @@ export default function ClientDetails({ client, onClose }: ClientDetailsProps) {
         type: "ADD_ORDER",
         payload: { clientId: client.id, items: updatedItems },
       })
+      await adjustStock(updatedItems, -1)
     } else {
+      // Calculate stock diff: old items vs new items
+      const oldOrder = client.orders.find((o) => o.id === editOrderId)
+      if (oldOrder) {
+        const oldMap = new Map(oldOrder.items.map((i) => [i.name, i.quantity]))
+        const newMap = new Map(updatedItems.map((i) => [i.name, i.quantity]))
+        const allNames = new Set([...oldMap.keys(), ...newMap.keys()])
+        const stockChanges: { name: string; quantity: number }[] = []
+        for (const name of allNames) {
+          const oldQty = oldMap.get(name) || 0
+          const newQty = newMap.get(name) || 0
+          const diff = newQty - oldQty
+          if (diff !== 0) stockChanges.push({ name, quantity: Math.abs(diff) })
+          // Apply stock: if diff > 0 (more ordered) → decrement, if diff < 0 (less ordered) → increment
+          if (diff !== 0) {
+            const product = findProduct(name)
+            if (product && product.stock >= 0) {
+              const newStock = Math.max(0, product.stock - diff)
+              const updated = { ...product, stock: newStock }
+              await updateProductOnSupabase(updated)
+              dispatch({ type: "UPDATE_PRODUCT", payload: updated })
+            }
+          }
+        }
+      }
+
       await updateOrderOnSupabase({ id: editOrderId, items: updatedItems, total })
       dispatch({
         type: "UPDATE_ORDER",
@@ -170,6 +227,7 @@ export default function ClientDetails({ client, onClose }: ClientDetailsProps) {
         type: "ADD_ORDER",
         payload: { clientId: client.id, items: order.items },
       })
+      await adjustStock(items, -1)
     } catch (err) {
       console.error("Failed to clone order:", err)
     } finally {
@@ -180,11 +238,15 @@ export default function ClientDetails({ client, onClose }: ClientDetailsProps) {
   const handleDeleteOrder = async () => {
     if (!deleteOrderId) return
     try {
+      const deletedOrder = client.orders.find((o) => o.id === deleteOrderId)
       await deleteOrderOnSupabase(deleteOrderId)
       dispatch({
         type: "DELETE_ORDER",
         payload: { clientId: client.id, orderId: deleteOrderId },
       })
+      if (deletedOrder) {
+        await adjustStock(deletedOrder.items, 1)
+      }
     } catch (err) {
       console.error("Failed to delete order:", err)
     } finally {
@@ -451,6 +513,7 @@ export default function ClientDetails({ client, onClose }: ClientDetailsProps) {
         order={editOrderId && editOrderId !== "__clone__" ? client.orders.find((o) => o.id === editOrderId) || null : null}
         cloneItems={editOrderId === "__clone__" ? editOrder : null}
         productNames={productNames}
+        products={state.products}
         onSave={handleEditOrderSave}
         onClose={() => { setEditOrderId(null); setEditOrder(null) }}
       />

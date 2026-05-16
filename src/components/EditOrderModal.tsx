@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import type { Order, OrderItem } from "../lib/store"
+import type { Order, OrderItem, Product } from "../lib/store"
 import { useI18n } from "../lib/i18n"
 import { useSettings } from "../lib/settings"
 import { Button } from "./ui/button"
@@ -13,6 +13,7 @@ interface EditOrderModalProps {
   order: Order | null
   cloneItems?: OrderItem[] | null
   productNames: string[]
+  products: Product[]
   onSave: (items: OrderItem[]) => Promise<void>
   onClose: () => void
 }
@@ -29,6 +30,7 @@ export default function EditOrderModal({
   productNames,
   onSave,
   onClose,
+  products,
 }: EditOrderModalProps) {
   const { t } = useI18n()
   const { activeRestaurant } = useSettings()
@@ -51,7 +53,15 @@ export default function EditOrderModal({
   const removeItem = (id: string) => setItems((prev) => prev.filter((i) => i.id !== id))
   const updateItem = (id: string, field: keyof OrderItem, value: string | number) =>
     setItems((prev) =>
-      prev.map((i) => (i.id === id ? { ...i, [field]: value } : i))
+      prev.map((i) => {
+        if (i.id !== id) return i
+        const updated = { ...i, [field]: value }
+        if (field === "name" && typeof value === "string") {
+          const product = products.find((p) => p.name.toLowerCase() === value.toLowerCase())
+          if (product) updated.price = product.price
+        }
+        return updated
+      })
     )
 
   const handleSave = async () => {

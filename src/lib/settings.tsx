@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react"
+import { useAuth } from "./auth"
 import {
   loadRestaurants,
   createRestaurantOnSupabase,
@@ -90,18 +91,18 @@ interface SettingsContextType {
 const SettingsContext = createContext<SettingsContextType | null>(null)
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth()
   const [data, setData] = useState<RestaurantsData>(() => {
     return loadFromLocal() || { activeId: VALID_DEFAULT_ID, list: [DEFAULT_RESTAURANT] }
   })
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (!user) return
     loadRestaurants()
       .then((dbList) => {
         if (dbList.length > 0) {
-          const localList = loadFromLocal()
-          const localIds = new Set(localList?.list.map((r) => r.id) || [])
-          const merged: Restaurant[] = dbList.map((r) => ({
+          const restaurants: Restaurant[] = dbList.map((r) => ({
             id: r.id,
             name: r.name,
             currency: r.currency,
@@ -110,12 +111,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
             tableCount: r.table_count,
             darkMode: r.dark_mode,
           }))
-          const localActiveId = localList?.activeId
-          const activeInMerged = localActiveId && merged.some((r) => r.id === localActiveId)
-          const next: RestaurantsData = {
-            activeId: activeInMerged ? localActiveId : merged[0].id,
-            list: merged,
-          }
+          const local = loadFromLocal()
+          const activeId = (local && restaurants.some((r) => r.id === local.activeId))
+            ? local.activeId
+            : restaurants[0].id
+          const next: RestaurantsData = { activeId, list: restaurants }
           saveToLocal(next)
           setData(next)
         } else {
@@ -135,9 +135,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           }
         }
       })
-      .catch(() => {})
+      .catch((err) => console.error("Failed to load restaurants from DB:", err))
       .finally(() => setLoading(false))
-  }, [])
+  }, [user?.id])
 
   const activeRestaurant = data.list.find((r) => r.id === data.activeId) || data.list[0] || DEFAULT_RESTAURANT
 
