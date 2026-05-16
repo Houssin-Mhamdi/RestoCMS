@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react"
+import { createContext, useContext, useState, useCallback, useEffect, useRef, type ReactNode } from "react"
 import { useAuth } from "./auth"
 import {
   loadRestaurants,
@@ -93,10 +93,11 @@ const SettingsContext = createContext<SettingsContextType | null>(null)
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
   const [data, setData] = useState<RestaurantsData>({
-    activeId: VALID_DEFAULT_ID,
-    list: [DEFAULT_RESTAURANT],
+    activeId: "",
+    list: [],
   })
   const [loading, setLoading] = useState(true)
+  const creating = useRef(false)
 
   useEffect(() => {
     if (!user) return
@@ -116,12 +117,17 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           const next: RestaurantsData = { activeId, list: restaurants }
           saveToLocal(next)
           setData(next)
-        } else {
+        } else if (!creating.current) {
+          creating.current = true
           const pendingName = localStorage.getItem("restocms_pending_restaurant_name")
           const newRestaurant: Restaurant = {
-            ...DEFAULT_RESTAURANT,
             id: crypto.randomUUID?.() || "resto-" + Date.now(),
             name: pendingName || DEFAULT_RESTAURANT.name,
+            currency: DEFAULT_RESTAURANT.currency,
+            color: DEFAULT_RESTAURANT.color,
+            logo: DEFAULT_RESTAURANT.logo,
+            tableCount: DEFAULT_RESTAURANT.tableCount,
+            darkMode: DEFAULT_RESTAURANT.darkMode,
           }
           localStorage.removeItem("restocms_pending_restaurant_name")
           createRestaurantOnSupabase({
@@ -214,7 +220,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setData((prevData) => {
       const remaining = prevData.list.filter((r) => r.id !== id)
       if (remaining.length === 0) {
-        const next = { activeId: VALID_DEFAULT_ID, list: [DEFAULT_RESTAURANT] }
+        const next: RestaurantsData = { activeId: "", list: [] }
         saveToLocal(next)
         return next
       }
