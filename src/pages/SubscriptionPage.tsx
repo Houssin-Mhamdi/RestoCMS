@@ -4,7 +4,7 @@ import { useI18n } from "../lib/i18n"
 import { loadSubscription, type Subscription } from "../lib/supabase-service"
 import { Button } from "../components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
-import { CreditCard, Check, Loader2, AlertTriangle } from "lucide-react"
+import { CreditCard, Check, Loader2, AlertTriangle, XCircle } from "lucide-react"
 
 const STORE_URL = "https://restooline.netlify.app"
 
@@ -21,9 +21,11 @@ export default function SubscriptionPage() {
   const [config, setConfig] = useState<StripeConfig | null>(null)
   const [loading, setLoading] = useState(true)
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null)
+  const [cancelLoading, setCancelLoading] = useState(false)
   const [error, setError] = useState("")
 
-  useEffect(() => {
+  const loadData = () => {
+    setLoading(true)
     Promise.all([
       loadSubscription(),
       fetch(`${STORE_URL}/api/stripe-config`).then((r) => r.json()),
@@ -37,6 +39,22 @@ export default function SubscriptionPage() {
         setError("Failed to load subscription data")
       })
       .finally(() => setLoading(false))
+  }
+
+  useEffect(() => {
+    const sessionId = new URLSearchParams(window.location.search).get("session_id")
+    if (sessionId) {
+      fetch(`${STORE_URL}/api/confirm-subscription`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId }),
+      })
+        .then(() => loadData())
+        .catch(console.error)
+      window.history.replaceState({}, "", window.location.pathname)
+    } else {
+      loadData()
+    }
   }, [])
 
   const PLANS = [
@@ -116,12 +134,31 @@ export default function SubscriptionPage() {
     }
   }
 
+  const handleCancel = async () => {
+    if (!user || !confirm(t("cancelConfirm"))) return
+    setCancelLoading(true)
+    try {
+      const res = await fetch(`${STORE_URL}/api/cancel-subscription`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id }),
+      })
+      if (res.ok) loadData()
+      else setError(t("paymentFailed"))
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setCancelLoading(false)
+    }
+  }
+
   const trialDaysLeft = sub?.trialEndsAt
     ? Math.max(0, Math.ceil((new Date(sub.trialEndsAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
     : 0
 
   const isTrialing = sub?.status === "trialing" && sub?.plan === "free"
   const isTrialExpired = isTrialing && trialDaysLeft === 0
+  const isPaid = sub?.plan === "restaurant" || sub?.plan === "enterprise"
   const currentPlanLabel = sub?.plan === "enterprise" ? t("planEnterprise") : sub?.plan === "restaurant" ? t("planRestaurant") : t("planFree")
 
   if (loading) {
@@ -152,7 +189,7 @@ export default function SubscriptionPage() {
             {t("currentPlan")}: <span className="text-primary font-bold">{currentPlanLabel}</span>
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-2">
           {isTrialing && !isTrialExpired && (
             <p className="text-sm text-muted">
               {t("daysLeft").replace("{days}", String(trialDaysLeft))}
@@ -161,11 +198,32 @@ export default function SubscriptionPage() {
           {isTrialExpired && (
             <p className="text-sm text-destructive">{t("trialExpired")}</p>
           )}
-          {sub?.stripeCustomerId && (
-            <Button variant="outline" size="sm" onClick={handleManageBilling} className="mt-2">
-              {t("manageBilling")}
-            </Button>
+          {sub?.status === "canceled" && isPaid && (
+            <p className="text-sm text-destructive">{t("canceledAtPeriodEnd")}</p>
           )}
+          <div className="flex gap-2">
+            {sub?.stripeCustomerId && (
+              <Button variant="outline" size="sm" onClick={handleManageBilling}>
+                {t("manageBilling")}
+              </Button>
+            )}
+            {isPaid && sub?.status !== "canceled" && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCancel}
+                disabled={cancelLoading}
+                className="text-destructive border-destructive/30 hover:bg-destructive/10"
+              >
+                {cancelLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                ) : (
+                  <XCircle className="h-4 w-4 mr-1" />
+                )}
+                {t("cancelSubscription")}
+              </Button>
+            )}
+          </div>
         </CardContent>
       </Card>
 

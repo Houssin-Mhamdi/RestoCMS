@@ -247,7 +247,9 @@ const translations: Record<Lang, Record<string, string>> = {
     current: "Actuel",
     pricePerMonth: "{price}€/mois",
     paymentFailed: "Échec du paiement",
-    paymentSuccess: "Paiement réussi",
+    cancelSubscription: "Résilier l'abonnement",
+    cancelConfirm: "Voulez-vous vraiment résilier ? L'abonnement restera actif jusqu'à la fin de la période de facturation.",
+    canceledAtPeriodEnd: "Résiliation programmée — actif jusqu'à la fin de la période",
   },
   en: {
     all: "All",
@@ -493,7 +495,9 @@ const translations: Record<Lang, Record<string, string>> = {
     current: "Current",
     pricePerMonth: "{price}€/month",
     paymentFailed: "Payment failed",
-    paymentSuccess: "Payment successful",
+    cancelSubscription: "Cancel subscription",
+    cancelConfirm: "Are you sure? The subscription will remain active until the end of the billing period.",
+    canceledAtPeriodEnd: "Cancellation scheduled — active until end of period",
   },
   de: {
     all: "Alle",
@@ -740,6 +744,9 @@ const translations: Record<Lang, Record<string, string>> = {
     pricePerMonth: "{price}€/Monat",
     paymentFailed: "Zahlung fehlgeschlagen",
     paymentSuccess: "Zahlung erfolgreich",
+    cancelSubscription: "Abonnement kündigen",
+    cancelConfirm: "Sind Sie sicher? Das Abonnement bleibt bis zum Ende des Abrechnungszeitraums aktiv.",
+    canceledAtPeriodEnd: "Kündigung geplant — aktiv bis Periodenende",
   },
 }
 

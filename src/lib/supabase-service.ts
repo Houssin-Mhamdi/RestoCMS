@@ -702,6 +702,7 @@ export interface Subscription {
   stripeSubscriptionId: string
   currentPeriodStart: string | null
   currentPeriodEnd: string | null
+  cancelAtPeriodEnd?: boolean
 }
 
 export async function loadSubscription(): Promise<Subscription | null> {
