@@ -24,6 +24,7 @@ export default function SubscriptionPage() {
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null)
   const [cancelLoading, setCancelLoading] = useState(false)
   const [showCancelDialog, setShowCancelDialog] = useState(false)
+  const [switchLoading, setSwitchLoading] = useState<string | null>(null)
   const [error, setError] = useState("")
 
   const loadData = () => {
@@ -245,7 +246,7 @@ export default function SubscriptionPage() {
             const isCurrent = sub?.plan === plan.id
             const isUpgrade = !isCurrent && plan.id !== "free" && plan.priceId
             const showUpgrade = isUpgrade && !isPaid
-            const showChangePlan = isUpgrade && isPaid && sub?.stripeCustomerId
+            const showSwitch = isUpgrade && isPaid
 
             return (
               <Card
@@ -280,9 +281,33 @@ export default function SubscriptionPage() {
                     <Button disabled variant="outline" className="w-full">
                       {t("current")}
                     </Button>
-                  ) : showChangePlan ? (
-                    <Button onClick={handleManageBilling} variant="outline" className="w-full">
-                      {t("manageBilling")}
+                  ) : showSwitch ? (
+                    <Button
+                      onClick={async () => {
+                        setSwitchLoading(plan.id)
+                        setError("")
+                        try {
+                          const res = await fetch(`${STORE_URL}/api/update-subscription`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ userId: user?.id, priceId: plan.priceId }),
+                          })
+                          const data = await res.json()
+                          if (!res.ok) throw new Error(data.error)
+                          loadData()
+                        } catch (err: any) {
+                          setError(err.message)
+                        } finally {
+                          setSwitchLoading(null)
+                        }
+                      }}
+                      disabled={switchLoading !== null}
+                      className="w-full"
+                    >
+                      {switchLoading === plan.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : null}
+                      {t("subscribeNow")}
                     </Button>
                   ) : showUpgrade ? (
                     <Button
