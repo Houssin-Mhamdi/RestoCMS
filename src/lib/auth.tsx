@@ -53,12 +53,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     password: string,
     restaurantName?: string
   ): Promise<string | null> => {
-    const { error } = await supabase.auth.signUp({ email, password })
-    if (error) return error.message
     if (restaurantName) {
       localStorage.setItem("restocms_pending_restaurant_name", restaurantName)
     }
-    return null
+    const { error } = await supabase.auth.signUp({ email, password })
+    return error?.message ?? null
   }
 
   const signOut = async () => {
