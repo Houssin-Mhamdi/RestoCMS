@@ -92,8 +92,9 @@ const SettingsContext = createContext<SettingsContextType | null>(null)
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
-  const [data, setData] = useState<RestaurantsData>(() => {
-    return loadFromLocal() || { activeId: VALID_DEFAULT_ID, list: [DEFAULT_RESTAURANT] }
+  const [data, setData] = useState<RestaurantsData>({
+    activeId: VALID_DEFAULT_ID,
+    list: [DEFAULT_RESTAURANT],
   })
   const [loading, setLoading] = useState(true)
 
@@ -111,28 +112,39 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
             tableCount: r.table_count,
             darkMode: r.dark_mode,
           }))
-          const local = loadFromLocal()
-          const activeId = (local && restaurants.some((r) => r.id === local.activeId))
-            ? local.activeId
-            : restaurants[0].id
+          const activeId = restaurants[0].id
           const next: RestaurantsData = { activeId, list: restaurants }
           saveToLocal(next)
           setData(next)
         } else {
-          const local = loadFromLocal()
-          if (local && local.list.length > 0) {
-            Promise.allSettled(local.list.map((r) =>
-              createRestaurantOnSupabase({
+          const newRestaurant: Restaurant = {
+            ...DEFAULT_RESTAURANT,
+            id: crypto.randomUUID?.() || "resto-" + Date.now(),
+          }
+          createRestaurantOnSupabase({
+            id: newRestaurant.id,
+            name: newRestaurant.name,
+            currency: newRestaurant.currency,
+            color: newRestaurant.color,
+            logo: newRestaurant.logo,
+            tableCount: newRestaurant.tableCount,
+            darkMode: newRestaurant.darkMode,
+          }).then(() => loadRestaurants().then((list) => {
+            if (list.length > 0) {
+              const restaurants: Restaurant[] = list.map((r) => ({
                 id: r.id,
                 name: r.name,
                 currency: r.currency,
                 color: r.color,
                 logo: r.logo,
-                tableCount: r.tableCount,
-                darkMode: r.darkMode ?? false,
-              })
-            ))
-          }
+                tableCount: r.table_count,
+                darkMode: r.dark_mode,
+              }))
+              const next: RestaurantsData = { activeId: restaurants[0].id, list: restaurants }
+              saveToLocal(next)
+              setData(next)
+            }
+          })).catch(console.error)
         }
       })
       .catch((err) => console.error("Failed to load restaurants from DB:", err))

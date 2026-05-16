@@ -548,9 +548,13 @@ export interface DbRestaurant {
 }
 
 export async function loadRestaurants(): Promise<DbRestaurant[]> {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return []
+
   const { data, error } = await supabase
     .from("restaurants")
     .select("*")
+    .eq("user_id", user.id)
     .order("created_at", { ascending: true })
   if (error) throw error
   return (data || []).map((r: any) => ({
