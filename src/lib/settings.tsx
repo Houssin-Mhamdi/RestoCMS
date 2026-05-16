@@ -117,10 +117,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           saveToLocal(next)
           setData(next)
         } else {
+          const pendingName = localStorage.getItem("restocms_pending_restaurant_name")
           const newRestaurant: Restaurant = {
             ...DEFAULT_RESTAURANT,
             id: crypto.randomUUID?.() || "resto-" + Date.now(),
+            name: pendingName || DEFAULT_RESTAURANT.name,
           }
+          localStorage.removeItem("restocms_pending_restaurant_name")
           createRestaurantOnSupabase({
             id: newRestaurant.id,
             name: newRestaurant.name,

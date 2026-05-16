@@ -13,6 +13,7 @@ export default function Signup() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [confirm, setConfirm] = useState("")
+  const [restaurantName, setRestaurantName] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
@@ -29,7 +30,7 @@ export default function Signup() {
       return
     }
     setLoading(true)
-    const err = await signUp(email, password)
+    const err = await signUp(email, password, restaurantName || undefined)
     setLoading(false)
     if (err) {
       setError(err)
@@ -89,6 +90,16 @@ export default function Signup() {
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-text">{t("restaurantName")}</label>
+              <Input
+                type="text"
+                placeholder="My Restaurant"
+                value={restaurantName}
+                onChange={(e) => setRestaurantName(e.target.value)}
                 required
               />
             </div>
