@@ -128,7 +128,11 @@ export default function Sidebar() {
                 {state.clients.length !== 1 ? "s" : ""}
               </p>
               <p className="text-xs text-muted truncate">{user?.email}</p>
+              <p className="text-[10px] text-white/30 pt-1">v{__APP_VERSION__}-{__GIT_HASH__}</p>
             </>
+          )}
+          {!state.sidebarOpen && (
+            <p className="text-[10px] text-white/30 text-center pt-1">v{__APP_VERSION__}</p>
           )}
         </div>
       </aside>
