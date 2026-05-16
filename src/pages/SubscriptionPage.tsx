@@ -243,7 +243,9 @@ export default function SubscriptionPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {PLANS.map((plan) => {
             const isCurrent = sub?.plan === plan.id
-            const showUpgrade = !isCurrent && plan.id !== "free" && plan.priceId
+            const isUpgrade = !isCurrent && plan.id !== "free" && plan.priceId
+            const showUpgrade = isUpgrade && !isPaid
+            const showChangePlan = isUpgrade && isPaid && sub?.stripeCustomerId
 
             return (
               <Card
@@ -277,6 +279,10 @@ export default function SubscriptionPage() {
                   {isCurrent ? (
                     <Button disabled variant="outline" className="w-full">
                       {t("current")}
+                    </Button>
+                  ) : showChangePlan ? (
+                    <Button onClick={handleManageBilling} variant="outline" className="w-full">
+                      {t("manageBilling")}
                     </Button>
                   ) : showUpgrade ? (
                     <Button
