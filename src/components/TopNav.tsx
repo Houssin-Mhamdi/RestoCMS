@@ -180,7 +180,14 @@ export default function TopNav() {
                     ) : (
                       <Building2 className="h-4 w-4 text-primary shrink-0" />
                     )}
-                    <span className="truncate flex-1">{r.name}</span>
+                    <div className="flex-1 min-w-0">
+                      <span className="truncate block">{r.name}</span>
+                      {r.slug && (
+                        <span className="text-xs text-muted truncate block">
+                          restooline.netlify.app/{r.slug}
+                        </span>
+                      )}
+                    </div>
                     {r.id === activeRestaurant.id && (
                       <Check className="h-3.5 w-3.5 text-primary shrink-0" />
                     )}

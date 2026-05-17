@@ -10,6 +10,7 @@ import {
 export interface Restaurant {
   id: string
   name: string
+  slug: string
   currency: string
   color: string
   logo: string
@@ -27,6 +28,7 @@ const VALID_DEFAULT_ID = "00000000-0000-0000-0000-000000000000"
 const DEFAULT_RESTAURANT: Restaurant = {
   id: VALID_DEFAULT_ID,
   name: "RestoCMS",
+  slug: "restocms",
   currency: "€",
   color: "#f97316",
   logo: "",
@@ -107,6 +109,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           const restaurants: Restaurant[] = dbList.map((r) => ({
             id: r.id,
             name: r.name,
+            slug: r.slug,
             currency: r.currency,
             color: r.color,
             logo: r.logo,
@@ -120,9 +123,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         } else if (!creating.current) {
           creating.current = true
           const pendingName = localStorage.getItem("restocms_pending_restaurant_name")
+          const name = pendingName || DEFAULT_RESTAURANT.name
           const newRestaurant: Restaurant = {
             id: crypto.randomUUID?.() || "resto-" + Date.now(),
-            name: pendingName || DEFAULT_RESTAURANT.name,
+            name,
+            slug: name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 50),
             currency: DEFAULT_RESTAURANT.currency,
             color: DEFAULT_RESTAURANT.color,
             logo: DEFAULT_RESTAURANT.logo,
@@ -143,6 +148,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
               const restaurants: Restaurant[] = list.map((r) => ({
                 id: r.id,
                 name: r.name,
+                slug: r.slug,
                 currency: r.currency,
                 color: r.color,
                 logo: r.logo,

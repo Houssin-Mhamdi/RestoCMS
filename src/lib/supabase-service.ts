@@ -540,6 +540,7 @@ export async function updateReservationOnSupabase(reservation: Reservation) {
 export interface DbRestaurant {
   id: string
   name: string
+  slug: string
   currency: string
   color: string
   logo: string
@@ -560,12 +561,21 @@ export async function loadRestaurants(): Promise<DbRestaurant[]> {
   return (data || []).map((r: any) => ({
     id: r.id,
     name: r.name,
+    slug: r.slug || "",
     currency: r.currency,
     color: r.color,
     logo: r.logo || "",
     table_count: r.table_count ?? 0,
     dark_mode: r.dark_mode ?? false,
   }))
+}
+
+function toSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 50)
 }
 
 export async function createRestaurantOnSupabase(r: {
@@ -588,6 +598,7 @@ export async function createRestaurantOnSupabase(r: {
     logo: r.logo,
     table_count: r.tableCount,
     dark_mode: r.darkMode,
+    slug: toSlug(r.name),
   })
   if (error) throw error
 }
@@ -605,6 +616,7 @@ export async function updateRestaurantOnSupabase(r: {
     .from("restaurants")
     .update({
       name: r.name,
+      slug: toSlug(r.name),
       currency: r.currency,
       color: r.color,
       logo: r.logo,
