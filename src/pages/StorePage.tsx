@@ -48,7 +48,7 @@ export default function StorePage() {
   }
 
   const handlePreview = () => {
-    window.open("https://restooline.netlify.app", "_blank")
+    window.open(`https://restooline.netlify.app/${activeRestaurant.slug}`, "_blank")
   }
 
   return (
